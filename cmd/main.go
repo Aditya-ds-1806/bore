@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"ngrok-proxy/internal/server"
+	"bore/internal/server"
 	"os"
 	"sync"
 )

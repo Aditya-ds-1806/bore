@@ -1,4 +1,4 @@
-module ngrok-proxy
+module bore
 
 go 1.24.1
 
