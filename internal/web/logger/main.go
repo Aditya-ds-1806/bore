@@ -19,18 +19,21 @@ type Request struct {
 	QueryParams map[string][]string
 	Headers     map[string][]string
 	Body        []byte
+	Timestamp   int64
 }
 
 type Response struct {
 	Headers    map[string][]string
 	Body       []byte
 	StatusCode int
+	Timestamp  int64
 }
 
 type Log struct {
 	RequestID string
 	Request   Request
 	Response  Response
+	Duration  int64
 }
 
 type Logger struct {
@@ -61,6 +64,8 @@ func (l *Logger) LogRequest(req *resty.Request) {
 			fmt.Println("Error reading body:", err)
 			return
 		}
+
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 
 		request.Body = bodyBytes
 	}
@@ -104,5 +109,26 @@ func (l *Logger) LogResponse(res *resty.Response) {
 		return
 	}
 
+	requestTimestamp := res.Request.Time.UnixMilli()
+	responseTimestamp := res.ReceivedAt().UnixMilli()
+
+	durationMS := responseTimestamp - requestTimestamp
+
+	l.logs[requestID].Request.Timestamp = requestTimestamp
+	l.logs[requestID].Response.Timestamp = responseTimestamp
+
 	l.logs[requestID].Response = response
+	l.logs[requestID].Duration = durationMS
+}
+
+func (l *Logger) GetLogs() []*Log {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	var allLogs []*Log
+	for _, log := range l.logs {
+		allLogs = append(allLogs, log)
+	}
+
+	return allLogs
 }
