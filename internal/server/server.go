@@ -1,20 +1,15 @@
-package main
+package server
 
 import (
 	"fmt"
 	"io"
 	"net/http"
-	"sync"
 
 	"resty.dev/v3"
 )
 
-const API_URL string = "https://uber.com"
-
-func main() {
-	var wg sync.WaitGroup
-
-	resty := resty.New().SetBaseURL(API_URL)
+func StartProxy(upstreamURL string) error {
+	resty := resty.New().SetBaseURL(upstreamURL)
 	defer resty.Close()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -73,18 +68,5 @@ func main() {
 		fmt.Printf("Forwarded %d bytes to %s\n", size, r.RemoteAddr)
 	})
 
-	wg.Add(1)
-	go (func() {
-		defer wg.Done()
-
-		err := http.ListenAndServe(":8080", nil)
-
-		if err != nil {
-			fmt.Println(err)
-			panic(err)
-		}
-	})()
-
-	fmt.Println("Server is running on http://localhost:8080")
-	wg.Wait()
+	return http.ListenAndServe(":8080", nil)
 }
