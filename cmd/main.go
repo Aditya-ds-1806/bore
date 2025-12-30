@@ -1,15 +1,17 @@
 package main
 
 import (
+	"bore/internal/server"
+	"bore/internal/web/logger"
 	"flag"
 	"fmt"
-	"bore/internal/server"
 	"os"
 	"sync"
 )
 
 func main() {
 	var wg sync.WaitGroup
+	var logger = logger.NewLogger()
 
 	upstreamURL := flag.String("url", "", "Upstream URL to proxy requests to")
 	flag.StringVar(upstreamURL, "u", "", "Upstream URL to proxy requests to")
@@ -26,7 +28,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		err := server.StartProxy(*upstreamURL)
+		proxy := server.NewProxyServer(&server.ProxyServerConfig{
+			UpstreamURL: *upstreamURL,
+			Logger:      logger,
+		})
+
+		err := proxy.StartProxy()
 		if err != nil {
 			panic(err)
 		}

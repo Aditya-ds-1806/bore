@@ -1,19 +1,45 @@
 package server
 
 import (
+	"bore/internal/web/logger"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/google/uuid"
 	"resty.dev/v3"
 )
 
-func StartProxy(upstreamURL string) error {
-	resty := resty.New().SetBaseURL(upstreamURL)
-	defer resty.Close()
+type ProxyServerConfig struct {
+	UpstreamURL string
+	Logger      *logger.Logger
+}
+
+type ProxyServer struct {
+	resty       *resty.Client
+	Logger      *logger.Logger
+	UpstreamURL string
+}
+
+func (s *ProxyServer) StartProxy() error {
+	defer s.resty.Close()
+	return http.ListenAndServe(":8080", nil)
+}
+
+func NewProxyServer(cfg *ProxyServerConfig) *ProxyServer {
+	resty := resty.New().SetBaseURL(cfg.UpstreamURL)
+
+	server := &ProxyServer{
+		UpstreamURL: cfg.UpstreamURL,
+		Logger:      cfg.Logger,
+		resty:       resty,
+	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Received request:", r.Method, r.URL.Path, "from", r.RemoteAddr)
+		requestId := uuid.New().String()
+
+		fmt.Println("Received request:", requestId, r.Method, r.URL.Path, "from", r.RemoteAddr)
 
 		// Remove hop-by-hop headers
 		headers := r.Header.Clone()
@@ -29,8 +55,10 @@ func StartProxy(upstreamURL string) error {
 		// Set Accept-Encoding strictly to gzip and deflate, brotli not supported by resty
 		headers.Set("Accept-Encoding", "gzip, deflate")
 
+		ctx := context.WithValue(r.Context(), logger.RequestIDKey, requestId)
+
 		req := resty.
-			SetContext(r.Context()).
+			SetContext(ctx).
 			NewRequest().
 			SetMethod(r.Method).
 			SetURL(r.URL.Path).
@@ -40,12 +68,16 @@ func StartProxy(upstreamURL string) error {
 			SetHeaderMultiValues(headers).
 			SetHeader("X-Forwarded-For", r.RemoteAddr)
 
+		cfg.Logger.LogRequest(req)
+
 		res, err := req.Send()
 		if err != nil {
 			fmt.Println("Error fetching data:", err)
 			http.Error(w, "Error fetching data", http.StatusInternalServerError)
 			return
 		}
+
+		cfg.Logger.LogResponse(res)
 
 		for key, values := range res.Header() {
 			for _, value := range values {
@@ -68,5 +100,5 @@ func StartProxy(upstreamURL string) error {
 		fmt.Printf("Forwarded %d bytes to %s\n", size, r.RemoteAddr)
 	})
 
-	return http.ListenAndServe(":8080", nil)
+	return server
 }
