@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bore Inspector</title>
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --muted: #6b7280;
+            --panel: #ffffff;
+            --accent: #2563eb;
+            --radius: 10px;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            font-family: Inter, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            background: linear-gradient(180deg, #f7fafc 0%, #fff 100%);
+            color: #0f172a;
+        }
+
+        header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #edf2f7;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #fff;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        header p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px
+        }
+
+        .container {
+            display: flex;
+            height: calc(100% - 68px);
+            min-height: 0;
+        }
+
+        .sidebar {
+            width: 38%;
+            max-width: 540px;
+            border-right: 1px solid #eef2f7;
+            padding: 16px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #fff;
+        }
+
+        #search {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #e6edf3;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .requests {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .request-item {
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 120ms, transform 80ms;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border: 1px solid transparent;
+        }
+
+        .request-item:hover {
+            background: #fbfdff;
+            transform: translateY(-1px);
+        }
+
+        .request-item.selected {
+            background: #eef6ff;
+            border-color: #d4e6ff;
+        }
+
+        .summary {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .method {
+            font-weight: 700;
+            padding: 6px 8px;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 12px;
+            min-width: 56px;
+            text-align: center;
+        }
+
+        .method.GET {
+            background: #16a34a;
+        }
+
+        .method.POST {
+            background: #0366d6;
+        }
+
+        .method.PUT {
+            background: #7c3aed;
+        }
+
+        .method.DELETE {
+            background: #ef4444;
+        }
+
+        .method.PATCH {
+            background: #d97706;
+        }
+
+        .method.OTHER {
+            background: #6b7280;
+        }
+
+        .path {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+            color: #0b1220;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1
+        }
+
+        .status {
+            font-weight: 700;
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: white;
+            min-width: 64px;
+            text-align: center;
+        }
+
+        /* Color by status via attribute prefix */
+        .status[data-status^="2"] {
+            background: #16a34a;
+        }
+
+        .status[data-status^="3"] {
+            background: #2563eb;
+        }
+
+        .status[data-status^="4"] {
+            background: #f97316;
+        }
+
+        .status[data-status^="5"] {
+            background: #dc2626;
+        }
+
+        .status[data-status="0"] {
+            background: #94a3b8;
+        }
+
+        .meta {
+            font-size: 12px;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between
+        }
+
+        .details-pane {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+            box-sizing: border-box;
+            background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+        }
+
+        .placeholder {
+            color: var(--muted);
+            border: 1px dashed #e6edf3;
+            padding: 28px;
+            border-radius: 8px;
+        }
+
+        h2 {
+            margin: 8px 0;
+        }
+
+        h3 {
+            margin: 6px 0;
+        }
+
+        .section {
+            margin-bottom: 18px
+        }
+
+        pre {
+            background: #0b1220;
+            color: #e6eef8;
+            padding: 12px;
+            border-radius: 6px;
+            overflow: auto;
+            max-height: 480px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .kv {
+            display: flex;
+            gap: 10px;
+            font-family: monospace;
+            font-size: 13px;
+            margin-bottom: 6px
+        }
+
+        .kv .k {
+            color: #0b1220;
+            min-width: 160px
+        }
+
+        .kv .v {
+            color: #374151
+        }
+
+        @media (max-width: 800px) {
+            .container {
+                flex-direction: column
+            }
+
+            .sidebar {
+                width: 100%;
+                max-width: none;
+                height: 44vh
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div style="display:flex; flex-direction:column;">
+            <h1>Bore Inspector</h1>
+            <p>Inspect incoming requests & responses</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <input id="search" placeholder="Filter by path, method or status" />
+
+            <ul class="requests" id="requests">
+                {{range $idx, $log := .}}
+                <li class="request-item" data-index="{{$idx}}" data-requestid="{{.RequestID}}"
+                    data-req-ts="{{.Request.Timestamp}}" data-res-ts="{{.Response.Timestamp}}">
+                    <div class="summary">
+                        {{ $method := .Request.Method }}
+                        <div class="method {{if $method}}{{ $method }}{{else}}OTHER{{end}}">{{if $method}}{{ $method
+                            }}{{else}}OTHER{{end}}</div>
+                        <div class="path">{{.Request.URLPath}}</div>
+                        <div class="status" data-status="{{.Response.StatusCode}}">{{if eq .Response.StatusCode
+                            0}}Pending{{else}}{{.Response.StatusCode}}{{end}}</div>
+                    </div>
+
+                    <div class="meta">
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <div>{{.RequestID}}</div>
+                            <div class="item-time"
+                                style="color:#4b5563; font-family:monospace; font-size:12px; min-width:140px;">&nbsp;
+                            </div>
+                        </div>
+                        <div class="duration" style="font-family:monospace; color:#374151; font-size:12px;">&nbsp;</div>
+                    </div>
+
+                    <div class="details-template" style="display:none">
+                        <div class="section">
+                            <h2>Request</h2>
+                            <p><strong>Method:</strong> {{.Request.Method}} &nbsp; <strong>Path:</strong>
+                                <code>{{.Request.URLPath}}</code>
+                            </p>
+                            <p><strong>Time:</strong> <span class="req-ts-hr"
+                                    data-ts="{{.Request.Timestamp}}">&nbsp;</span></p>
+
+                            <h3>Headers</h3>
+                            {{ if .Request.Headers }}
+                            <div>
+                                {{ range $k, $vs := .Request.Headers }}
+                                <div class="kv">
+                                    <div class="k">{{$k}}</div>
+                                    <div class="v">{{index $vs 0}}</div>
+                                </div>
+                                {{ end }}
+                            </div>
+                            {{ else }}
+                            <p style="color:var(--muted)">(no request headers)</p>
+                            {{ end }}
+
+                            <h3>Body</h3>
+                            {{ if .Request.Body }}
+                            <pre>{{printf "%s" .Request.Body}}</pre>
+                            {{ else }}
+                            <p style="color:var(--muted)">(no request body)</p>
+                            {{ end }}
+                        </div>
+
+                        <div class="section">
+                            <h2>Response</h2>
+                            <p><strong>Status:</strong> {{if eq .Response.StatusCode
+                                0}}Pending{{else}}{{.Response.StatusCode}}{{end}}</p>
+                            <p><strong>Time:</strong> <span class="res-ts-hr"
+                                    data-ts="{{.Response.Timestamp}}">&nbsp;</span> &nbsp; <strong>Duration:</strong>
+                                <span class="duration-hr">&nbsp;</span>
+                            </p>
+
+                            <h3>Headers</h3>
+                            {{ if .Response.Headers }}
+                            <div>
+                                {{ range $k, $vs := .Response.Headers }}
+                                <div class="kv">
+                                    <div class="k">{{$k}}</div>
+                                    <div class="v">{{index $vs 0}}</div>
+                                </div>
+                                {{ end }}
+                            </div>
+                            {{ else }}
+                            <p style="color:var(--muted)">(no response headers)</p>
+                            {{ end }}
+
+                            <h3>Body</h3>
+                            {{ if .Response.Body }}
+                            <pre>{{printf "%s" .Response.Body}}</pre>
+                            {{ else }}
+                            <p style="color:var(--muted)">(no response body)</p>
+                            {{ end }}
+                        </div>
+                    </div>
+                </li>
+                {{end}}
+            </ul>
+        </aside>
+
+        <main class="details-pane">
+            <div id="placeholder" class="placeholder">Select a request on the left to view full details (headers, body,
+                etc.)</div>
+            <div id="details" aria-live="polite"></div>
+        </main>
+    </div>
+
+    <script>
+        // Small client-side behavior: click items to show details, filter list
+        const requestsRoot = document.getElementById('requests');
+        const items = Array.from(document.querySelectorAll('.request-item'));
+        const detailsEl = document.getElementById('details');
+        const placeholder = document.getElementById('placeholder');
+
+        function formatTs(ts) {
+            if (!ts) return '—';
+            return new Date(Number(ts)).toLocaleTimeString();
+        }
+
+        function formatDuration(reqTs, resTs) {
+            if (!reqTs || !resTs) return '—';
+            const d = resTs - reqTs;
+            if (d < 0) return '—';
+            if (d >= 1000) return (d / 1000).toFixed(2) + ' s';
+            return d + ' ms';
+        }
+
+        function populateItemTimes() {
+            items.forEach(it => {
+                const reqTs = it.getAttribute('data-req-ts');
+                const resTs = it.getAttribute('data-res-ts');
+                const timeEl = it.querySelector('.item-time');
+                const durationEl = it.querySelector('.duration');
+                if (timeEl) timeEl.innerText = formatTs(reqTs);
+                if (durationEl) {
+                    const d = formatDuration(reqTs, resTs);
+                    durationEl.innerText = (d === '—' ? (resTs && resTs != '0' ? '—' : 'Pending') : d);
+                }
+            });
+        }
+
+        function populateDetailsTimestamps(root) {
+            const reqEl = root.querySelector('.req-ts-hr');
+            const resEl = root.querySelector('.res-ts-hr');
+            const durEl = root.querySelector('.duration-hr');
+            const reqTs = reqEl && reqEl.getAttribute('data-ts');
+            const resTs = resEl && resEl.getAttribute('data-ts');
+            if (reqEl) reqEl.innerText = formatTs(reqTs);
+            if (resEl) resEl.innerText = formatTs(resTs);
+            if (durEl) durEl.innerText = formatDuration(reqTs, resTs);
+        }
+
+        items.forEach(item => item.addEventListener('click', () => {
+            document.querySelectorAll('.request-item.selected').forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+
+            const tmpl = item.querySelector('.details-template');
+            detailsEl.innerHTML = tmpl.innerHTML;
+            placeholder.style.display = 'none';
+
+            populateDetailsTimestamps(detailsEl);
+
+            // make <pre> copyable on click
+            detailsEl.querySelectorAll('pre').forEach(pre => {
+                pre.title = 'Click to copy';
+                pre.style.cursor = 'pointer';
+                pre.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(pre.innerText);
+                        pre.style.outline = '2px solid #cfe0ff';
+                        setTimeout(() => pre.style.outline = 'none', 300);
+                    } catch (e) { /* ignore */ }
+                });
+            });
+
+            // scroll details into view
+            detailsEl.scrollIntoView({ behavior: 'smooth' });
+        }));
+
+        // initial populate
+        populateItemTimes();
+
+        // Filter input
+        const search = document.getElementById('search');
+        search.addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase().trim();
+            items.forEach(it => {
+                const path = it.querySelector('.path').innerText.toLowerCase();
+                const method = it.querySelector('.method').innerText.toLowerCase();
+                const status = it.querySelector('.status').innerText.toLowerCase();
+                const rid = it.getAttribute('data-requestid').toLowerCase();
+                const previewEl = it.querySelector('.item-preview');
+                const preview = previewEl ? previewEl.innerText.toLowerCase() : '';
+                const show = !q || path.includes(q) || method.includes(q) || status.includes(q) || rid.includes(q) || preview.includes(q);
+                it.style.display = show ? '' : 'none';
+            });
+        });
+
+        // Apply method class normalization for any unknown methods
+        items.forEach(it => {
+            const mEl = it.querySelector('.method');
+            const method = mEl.innerText.trim();
+            if (!['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+                mEl.classList.add('OTHER');
+            }
+        });
+    </script>
+</body>
+
+</html>
