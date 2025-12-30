@@ -2,6 +2,7 @@ package main
 
 import (
 	"bore/internal/server"
+	"bore/internal/web"
 	"bore/internal/web/logger"
 	"flag"
 	"fmt"
@@ -33,12 +34,28 @@ func main() {
 			Logger:      logger,
 		})
 
+		fmt.Println("Proxy Server is running on http://localhost:8080")
+
 		err := proxy.StartProxy()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	fmt.Println("Server is running on http://localhost:8080")
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		fmt.Println("Web Server is running on http://localhost:8000/")
+		ws := web.WebServer{
+			Logger: logger,
+		}
+
+		err := ws.StartServer()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	wg.Wait()
 }
