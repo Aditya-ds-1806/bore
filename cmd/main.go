@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bore/internal/server"
+	"bore/internal/client"
 	"bore/internal/web"
 	"bore/internal/web/logger"
 	"flag"
@@ -29,7 +29,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		proxy := server.NewProxyServer(&server.ProxyServerConfig{
+		proxy := client.NewProxyServer(&client.ProxyServerConfig{
 			UpstreamURL: *upstreamURL,
 			Logger:      logger,
 		})
