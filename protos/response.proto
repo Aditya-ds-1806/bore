@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package borepb;
+option go_package = ".";
+
+message Response {
+    int32 status_code = 1;
+    map<string, string> headers = 2;
+    bytes body = 3;
+    int64 timestamp = 4;
+    string cookies = 5;
+}
