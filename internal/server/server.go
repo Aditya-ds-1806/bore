@@ -27,8 +27,8 @@ func (bs *BoreServer) StartBoreServer() error {
 
 	router.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
 		var upgrader = websocket.Upgrader{
-			ReadBufferSize:  1024 * 1e6,
-			WriteBufferSize: 1024 * 1e6,
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
 		}
 
 		conn, err := upgrader.Upgrade(w, r, nil)
