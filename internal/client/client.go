@@ -3,6 +3,7 @@ package client
 import (
 	borepb "bore/borepb"
 	"bore/internal/web/logger"
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -59,19 +60,26 @@ func (bc *BoreClient) HandleWSMessages() {
 			fmt.Println("Failed to parse cookies:", err)
 		}
 
+		ctx := context.WithValue(context.TODO(), logger.RequestIDKey, request.Id)
+
 		req := bc.resty.
 			NewRequest().
+			SetContext(ctx).
 			SetMethod(request.Method).
 			SetURL(request.Path).
 			SetBody(request.Body).
 			SetCookies(cookies).
 			SetHeaders(request.Headers)
 
+		bc.Logger.LogRequest(req)
+
 		res, err := req.Send()
 		if err != nil {
 			fmt.Println("Error fetching data:", err)
 			return
 		}
+
+		bc.Logger.LogResponse(res)
 
 		response := borepb.Response{
 			Id:         request.Id,

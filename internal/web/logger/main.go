@@ -1,9 +1,12 @@
 package logger
 
 import (
+	borepb "bore/borepb"
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
+	"strings"
 	"sync"
 
 	"resty.dev/v3"
@@ -13,26 +16,10 @@ type RequestID string
 
 const RequestIDKey RequestID = "bore-request-id"
 
-type Request struct {
-	Method      string
-	URLPath     string
-	QueryParams map[string][]string
-	Headers     map[string][]string
-	Body        []byte
-	Timestamp   int64
-}
-
-type Response struct {
-	Headers    map[string][]string
-	Body       []byte
-	StatusCode int
-	Timestamp  int64
-}
-
 type Log struct {
 	RequestID string
-	Request   Request
-	Response  Response
+	Request   *borepb.Request
+	Response  *borepb.Response
 	Duration  int64
 }
 
@@ -51,23 +38,11 @@ func (l *Logger) LogRequest(req *resty.Request) {
 	requestID := req.Context().Value(RequestIDKey).(string)
 	fmt.Println("Logging request:", requestID)
 
-	request := Request{
-		Method:      req.Method,
-		URLPath:     req.URL,
-		QueryParams: req.QueryParams,
-		Headers:     req.Header,
-	}
-
-	if req.Body != nil {
-		bodyBytes, err := io.ReadAll(req.Body.(io.ReadCloser))
-		if err != nil {
-			fmt.Println("Error reading body:", err)
-			return
-		}
-
-		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-
-		request.Body = bodyBytes
+	request := borepb.Request{
+		Method:  req.Method,
+		Path:    req.URL,
+		Headers: l.flattenHeaders(req.Header),
+		Body:    req.Body.([]byte),
 	}
 
 	l.mutex.Lock()
@@ -75,7 +50,7 @@ func (l *Logger) LogRequest(req *resty.Request) {
 
 	l.logs[requestID] = &Log{
 		RequestID: requestID,
-		Request:   request,
+		Request:   &request,
 	}
 }
 
@@ -83,9 +58,13 @@ func (l *Logger) LogResponse(res *resty.Response) {
 	requestID := res.Request.Context().Value(RequestIDKey).(string)
 	fmt.Println("Logging response:", requestID)
 
-	response := Response{
-		Headers:    res.Header(),
-		StatusCode: res.StatusCode(),
+	requestTimestamp := res.Request.Time.UnixMilli()
+	responseTimestamp := res.ReceivedAt().UnixMilli()
+
+	response := borepb.Response{
+		Headers:    l.flattenHeaders(res.Header()),
+		StatusCode: int32(res.StatusCode()),
+		Timestamp:  responseTimestamp,
 	}
 
 	if res.Body != nil {
@@ -97,7 +76,6 @@ func (l *Logger) LogResponse(res *resty.Response) {
 
 		res.Body.Close()
 		res.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-
 		response.Body = bodyBytes
 	}
 
@@ -109,16 +87,9 @@ func (l *Logger) LogResponse(res *resty.Response) {
 		return
 	}
 
-	requestTimestamp := res.Request.Time.UnixMilli()
-	responseTimestamp := res.ReceivedAt().UnixMilli()
-
-	durationMS := responseTimestamp - requestTimestamp
-
 	l.logs[requestID].Request.Timestamp = requestTimestamp
-	l.logs[requestID].Response.Timestamp = responseTimestamp
-
-	l.logs[requestID].Response = response
-	l.logs[requestID].Duration = durationMS
+	l.logs[requestID].Response = &response
+	l.logs[requestID].Duration = responseTimestamp - requestTimestamp
 }
 
 func (l *Logger) GetLogs() []*Log {
@@ -131,4 +102,14 @@ func (l *Logger) GetLogs() []*Log {
 	}
 
 	return allLogs
+}
+
+func (l *Logger) flattenHeaders(headers http.Header) map[string]string {
+	headersMap := make(map[string]string)
+
+	for headerName, headerValues := range headers {
+		headersMap[headerName] = strings.Join(headerValues, ",")
+	}
+
+	return headersMap
 }
