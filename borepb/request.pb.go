@@ -23,12 +23,13 @@ const (
 
 type Request struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Method        string                 `protobuf:"bytes,1,opt,name=method,proto3" json:"method,omitempty"`
-	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
-	Headers       map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Body          []byte                 `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
-	Timestamp     int64                  `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	Cookies       string                 `protobuf:"bytes,6,opt,name=cookies,proto3" json:"cookies,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Method        string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
+	Path          string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	Headers       map[string]string      `protobuf:"bytes,4,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Body          []byte                 `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	Timestamp     int64                  `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Cookies       string                 `protobuf:"bytes,7,opt,name=cookies,proto3" json:"cookies,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -61,6 +62,13 @@ func (x *Request) ProtoReflect() protoreflect.Message {
 // Deprecated: Use Request.ProtoReflect.Descriptor instead.
 func (*Request) Descriptor() ([]byte, []int) {
 	return file_protos_request_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Request) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
 }
 
 func (x *Request) GetMethod() string {
@@ -109,14 +117,15 @@ var File_protos_request_proto protoreflect.FileDescriptor
 
 const file_protos_request_proto_rawDesc = "" +
 	"\n" +
-	"\x14protos/request.proto\x12\x06borepb\"\xf5\x01\n" +
-	"\aRequest\x12\x16\n" +
-	"\x06method\x18\x01 \x01(\tR\x06method\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\x126\n" +
-	"\aheaders\x18\x03 \x03(\v2\x1c.borepb.Request.HeadersEntryR\aheaders\x12\x12\n" +
-	"\x04body\x18\x04 \x01(\fR\x04body\x12\x1c\n" +
-	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\x12\x18\n" +
-	"\acookies\x18\x06 \x01(\tR\acookies\x1a:\n" +
+	"\x14protos/request.proto\x12\x06borepb\"\x85\x02\n" +
+	"\aRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06method\x18\x02 \x01(\tR\x06method\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\x126\n" +
+	"\aheaders\x18\x04 \x03(\v2\x1c.borepb.Request.HeadersEntryR\aheaders\x12\x12\n" +
+	"\x04body\x18\x05 \x01(\fR\x04body\x12\x1c\n" +
+	"\ttimestamp\x18\x06 \x01(\x03R\ttimestamp\x12\x18\n" +
+	"\acookies\x18\a \x01(\tR\acookies\x1a:\n" +
 	"\fHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x03Z\x01.b\x06proto3"
