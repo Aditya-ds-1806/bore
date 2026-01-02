@@ -2,6 +2,7 @@ package main
 
 import (
 	"bore/internal/client"
+	"bore/internal/server"
 	"bore/internal/web"
 	"bore/internal/web/logger"
 	"flag"
@@ -29,15 +30,31 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		proxy := client.NewProxyServer(&client.ProxyServerConfig{
+		bs := server.NewBoreServer()
+
+		fmt.Println("Bore server is running on http://localhost:8080/")
+
+		err := bs.StartBoreServer()
+		if err != nil {
+			fmt.Println("Failed to start bore server")
+			panic(err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		bc := client.NewBoreClient(&client.BoreClientConfig{
 			UpstreamURL: *upstreamURL,
 			Logger:      logger,
 		})
 
-		fmt.Println("Proxy Server is running on http://localhost:8080")
+		fmt.Println("Bore client is running")
 
-		err := proxy.StartProxy()
+		err := bc.StartBoreClient()
 		if err != nil {
+			fmt.Println("Failed to start bore client")
 			panic(err)
 		}
 	}()
@@ -53,6 +70,7 @@ func main() {
 
 		err := ws.StartServer()
 		if err != nil {
+			fmt.Println("Failed to start bore client")
 			panic(err)
 		}
 	}()
