@@ -11,9 +11,24 @@ import (
 	"sync"
 )
 
-func main() {
-	var wg sync.WaitGroup
-	var logger = logger.NewLogger()
+var AppMode string
+
+func RunBoreServer(wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	bs := server.NewBoreServer()
+
+	fmt.Println("Bore server is running on http://localhost:8080/")
+
+	err := bs.StartBoreServer()
+	if err != nil {
+		fmt.Println("Failed to start bore server")
+		panic(err)
+	}
+}
+
+func RunBoreClient(logger *logger.Logger, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	upstreamURL := flag.String("url", "", "Upstream URL to proxy requests to")
 	flag.StringVar(upstreamURL, "u", "", "Upstream URL to proxy requests to")
@@ -26,54 +41,50 @@ func main() {
 		return
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	bc := client.NewBoreClient(&client.BoreClientConfig{
+		UpstreamURL: *upstreamURL,
+		Logger:      logger,
+	})
 
-		bs := server.NewBoreServer()
+	fmt.Println("Bore client is running")
 
-		fmt.Println("Bore server is running on http://localhost:8080/")
+	err := bc.StartBoreClient()
+	if err != nil {
+		fmt.Println("Failed to start bore client")
+		panic(err)
+	}
+}
 
-		err := bs.StartBoreServer()
-		if err != nil {
-			fmt.Println("Failed to start bore server")
-			panic(err)
-		}
-	}()
+func RunBoreWebClient(logger *logger.Logger, wg *sync.WaitGroup) {
+	defer wg.Done()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	fmt.Println("Web Server is running on http://localhost:8000/")
+	ws := web.WebServer{
+		Logger: logger,
+	}
 
-		bc := client.NewBoreClient(&client.BoreClientConfig{
-			UpstreamURL: *upstreamURL,
-			Logger:      logger,
-		})
+	err := ws.StartServer()
+	if err != nil {
+		fmt.Println("Failed to start bore client")
+		panic(err)
+	}
+}
 
-		fmt.Println("Bore client is running")
+func main() {
+	var wg sync.WaitGroup
 
-		err := bc.StartBoreClient()
-		if err != nil {
-			fmt.Println("Failed to start bore client")
-			panic(err)
-		}
-	}()
+	if AppMode == "server" {
+		wg.Add(1)
+		go RunBoreServer(&wg)
+	} else {
+		var logger = logger.NewLogger()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+		wg.Add(1)
+		go RunBoreClient(logger, &wg)
 
-		fmt.Println("Web Server is running on http://localhost:8000/")
-		ws := web.WebServer{
-			Logger: logger,
-		}
-
-		err := ws.StartServer()
-		if err != nil {
-			fmt.Println("Failed to start bore client")
-			panic(err)
-		}
-	}()
+		wg.Add(1)
+		go RunBoreWebClient(logger, &wg)
+	}
 
 	wg.Wait()
 }

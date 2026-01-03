@@ -1,7 +1,16 @@
-.PHONY: protos build
+.PHONY: protos
 
-build:
-	go build -o bore cmd/main.go
+build-client:
+	go build -o bore -ldflags "-X 'main.AppMode=client'" cmd/main.go
+
+build-server:
+	go build -o bore-server -ldflags "-X 'main.AppMode=server'" cmd/main.go
+
+run-client:
+	go run -race -ldflags "-X 'main.AppMode=client'" cmd/main.go
+
+run-server:
+	go run -race -ldflags "-X 'main.AppMode=server'" cmd/main.go
 
 protos:
 	rm -rf borepb
