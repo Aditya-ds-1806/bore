@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 
@@ -100,6 +101,10 @@ func (l *Logger) GetLogs() []*Log {
 	for _, log := range l.logs {
 		allLogs = append(allLogs, log)
 	}
+
+	sort.Slice(allLogs, func(i, j int) bool {
+		return allLogs[i].Request.Timestamp > allLogs[j].Request.Timestamp
+	})
 
 	return allLogs
 }
