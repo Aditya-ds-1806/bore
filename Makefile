@@ -13,9 +13,8 @@ run-server:
 	go run -race -ldflags "-X 'main.AppMode=server'" cmd/main.go
 
 start-server:
-	nginx -s quit
-	nginx -t -c $(pwd)/nginx.conf
-	nginx -c $(pwd)/nginx.conf
+	nginx -t -c $(PWD)/nginx.conf
+	nginx -c $(PWD)/nginx.conf
 	./bore-server
 
 protos:
