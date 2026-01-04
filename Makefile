@@ -12,6 +12,12 @@ run-client:
 run-server:
 	go run -race -ldflags "-X 'main.AppMode=server'" cmd/main.go
 
+start-server:
+	nginx -s quit
+	nginx -t -c $(pwd)/nginx.conf
+	nginx -c $(pwd)/nginx.conf
+	./bore-server
+
 protos:
 	rm -rf borepb
 	mkdir -p borepb
