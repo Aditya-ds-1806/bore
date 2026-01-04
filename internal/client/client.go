@@ -14,6 +14,8 @@ import (
 	"resty.dev/v3"
 )
 
+var BoreServerHost string
+
 type BoreClientConfig struct {
 	UpstreamURL string
 	Logger      *logger.Logger
@@ -33,7 +35,8 @@ func (bc *BoreClient) NewWSConnection() error {
 		WriteBufferSize: 1024,
 	}
 
-	conn, _, err := dialer.Dial("ws://localhost:8080/ws", nil)
+	wsConnStr := fmt.Sprintf("ws://%s/ws", BoreServerHost)
+	conn, _, err := dialer.Dial(wsConnStr, nil)
 	bc.wsConn = conn
 
 	return err
