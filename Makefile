@@ -1,7 +1,7 @@
 .PHONY: protos
 
 build-client:
-	go build -o bore -ldflags "-X 'main.AppMode=client' -X 'bore/internal/client.BoreServerHost=43.204.144.35'" cmd/main.go
+	go build -o bore -ldflags "-X 'main.AppMode=client' -X 'bore/internal/client.BoreServerHost=trybore.com'" cmd/main.go
 
 build-server:
 	go build -o bore-server -ldflags "-X 'main.AppMode=server'" cmd/main.go
