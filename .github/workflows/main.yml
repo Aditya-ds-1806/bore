@@ -26,3 +26,7 @@ jobs:
             echo "Reload Nginx"
             sudo cp ./nginx.conf /etc/nginx/nginx.conf
             sudo systemctl reload nginx
+
+            echo "Restarting Bore Server"
+            kill -9 $(lsof -t -c bore-server)
+            ./bore-server > /dev/null 2>&1 &
