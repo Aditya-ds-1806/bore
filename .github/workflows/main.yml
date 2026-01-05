@@ -4,6 +4,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    environment: EC2
     steps:
       - name: Execute remote SSH commands using SSH key
         uses: appleboy/ssh-action@v1
