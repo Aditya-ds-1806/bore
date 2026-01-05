@@ -1,4 +1,4 @@
-name: Remote SSH Command
+name: Deploy
 on: workflow_dispatch
 jobs:
   deploy:
