@@ -14,10 +14,15 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 22
           script: |
-            sudo su
+            echo "cd into directory"
             cd ./bore
+            
+            echo "Pull latest changes"
             git pull origin main
+
+            echo "Build server"
             make build-server
+
+            echo "Reload Nginx"
             cp ./nginx.conf /etc/nginx/nginx.conf
             sudo systemctl reload nginx
-            
