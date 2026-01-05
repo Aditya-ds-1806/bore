@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: EC2
     steps:
-      - name: Execute remote SSH commands using SSH key
+      - name: Build and Deploy Bore Server
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
