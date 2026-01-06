@@ -45,7 +45,7 @@ func (bs *BoreServer) StartBoreServer() error {
 		requestId := uuid.New().String()
 		bs.reqIdChanMap[requestId] = make(chan *borepb.Response)
 
-		fmt.Println("Received request:", requestId, r.Method, r.URL.Path, "from", r.RemoteAddr)
+		fmt.Println(r.Method, r.Host, r.URL.Path, "from", r.RemoteAddr)
 
 		hopByHopHeaders := []string{
 			"Connection",
