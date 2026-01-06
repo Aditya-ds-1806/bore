@@ -16,6 +16,9 @@ jobs:
           script: |
             echo "cd into directory"
             cd ./bore
+
+            echo "create logs dir"
+            mkdir -p logs
             
             echo "Pull latest changes"
             git pull origin main
