@@ -29,7 +29,8 @@ func (bs *BoreServer) StartBoreServer() error {
 	router := chi.NewRouter()
 
 	router.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
-		bs.logger.Info("new bore client connection request", zap.String("client_ip", r.RemoteAddr))
+		clientIP := r.Header.Get("X-Real-IP")
+		bs.logger.Info("new bore client connection request", zap.String("client_ip", clientIP))
 
 		var upgrader = websocket.Upgrader{
 			ReadBufferSize:  1024,
@@ -38,21 +39,22 @@ func (bs *BoreServer) StartBoreServer() error {
 
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			bs.logger.Error("failed to upgrade connection to WS", zap.Error(err), zap.String("client_ip", r.RemoteAddr))
+			bs.logger.Error("failed to upgrade connection to WS", zap.Error(err), zap.String("client_ip", clientIP))
 			http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
 			return
 		}
 
 		bs.wsConn = conn
-		bs.logger.Info("connection upgraded to WS", zap.String("client_ip", r.RemoteAddr))
+		bs.logger.Info("connection upgraded to WS", zap.String("client_ip", clientIP))
 	})
 
 	router.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
 		requestId := uuid.New().String()
+		clientIP := r.Header.Get("X-Real-IP")
 
 		reqLogger := bs.logger.With(
 			zap.String("req_id", requestId),
-			zap.String("client_ip", r.RemoteAddr),
+			zap.String("client_ip", clientIP),
 		)
 
 		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path))
@@ -85,7 +87,7 @@ func (bs *BoreServer) StartBoreServer() error {
 		reqLogger.Debug("finished parsing cookies", zap.Any("cookies", cookies))
 
 		headersParsed := make(map[string]string)
-		headersParsed["X-Forwarded-For"] = r.RemoteAddr
+		headersParsed["X-Forwarded-For"] = clientIP
 		for headerName, headerValues := range r.Header {
 			if !slices.Contains(hopByHopHeaders, headerName) {
 				headersParsed[headerName] = strings.Join(headerValues, ",")
