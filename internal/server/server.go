@@ -2,6 +2,7 @@ package server
 
 import (
 	borepb "bore/borepb"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,10 +20,48 @@ import (
 )
 
 type BoreServer struct {
-	wsConn       *websocket.Conn
 	wsMutex      *sync.Mutex
 	logger       *zap.Logger
 	reqIdChanMap map[string]chan *borepb.Response
+	apps         map[string]*websocket.Conn
+}
+
+func (bs *BoreServer) generateAppId() string {
+	return strings.ToLower(rand.Text())
+}
+
+func (bs *BoreServer) handleApp(appId string, wsConn *websocket.Conn) {
+	defer func() { delete(bs.apps, appId) }()
+
+	if wsConn == nil {
+		bs.logger.Info("no wsConn for app", zap.String("appId", appId))
+		return
+	}
+
+	for {
+		response := &borepb.Response{}
+
+		_, res, err := wsConn.ReadMessage()
+
+		if websocket.IsUnexpectedCloseError(err) {
+			bs.logger.Info("ws conn closed unexpectedly", zap.Error(err))
+			bs.apps[appId] = nil
+			return
+		}
+
+		if err != nil {
+			bs.logger.Error("failed to read response from bore client", zap.Error(err))
+			return
+		}
+
+		err = proto.Unmarshal(res, response)
+		if err != nil {
+			bs.logger.Error("Failed to unmarshal response", zap.Error(err))
+			return
+		}
+
+		bs.reqIdChanMap[response.Id] <- response
+	}
 }
 
 func (bs *BoreServer) StartBoreServer() error {
@@ -44,12 +83,19 @@ func (bs *BoreServer) StartBoreServer() error {
 			return
 		}
 
-		bs.wsConn = conn
 		bs.logger.Info("connection upgraded to WS", zap.String("client_ip", clientIP))
+
+		appId := bs.generateAppId()
+		bs.apps[appId] = conn
+
+		bs.logger.Info("registered app!", zap.String("app_id", appId))
+
+		go bs.handleApp(appId, conn)
 	})
 
 	router.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
 		requestId := uuid.New().String()
+		appId := strings.Split(r.Host, ".")[0]
 		clientIP := r.Header.Get("X-Real-IP")
 
 		reqLogger := bs.logger.With(
@@ -57,9 +103,9 @@ func (bs *BoreServer) StartBoreServer() error {
 			zap.String("client_ip", clientIP),
 		)
 
-		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path))
+		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path), zap.String("appId", appId))
 
-		if bs.wsConn == nil {
+		if bs.apps[appId] == nil {
 			reqLogger.Error("No app found!")
 			http.Error(w, "No app found!", http.StatusBadRequest)
 			return
@@ -119,7 +165,7 @@ func (bs *BoreServer) StartBoreServer() error {
 		}
 
 		bs.wsMutex.Lock()
-		err = bs.wsConn.WriteMessage(websocket.BinaryMessage, reqBytes)
+		err = bs.apps[appId].WriteMessage(websocket.BinaryMessage, reqBytes)
 		bs.wsMutex.Unlock()
 		if err != nil {
 			reqLogger.Error("failed to write reqBytes to ws", zap.Error(err))
@@ -144,40 +190,6 @@ func (bs *BoreServer) StartBoreServer() error {
 		reqLogger.Info("response forwarded to bore client", zap.Int("res_size", size))
 	})
 
-	go func() {
-		bs.logger.Info("starting goroutine to read ws messages")
-
-		for {
-			response := &borepb.Response{}
-
-			if bs.wsConn == nil {
-				bs.logger.Debug("Waiting for bore client ws connection to be established")
-				continue
-			}
-
-			_, res, err := bs.wsConn.ReadMessage()
-
-			if websocket.IsUnexpectedCloseError(err) {
-				bs.logger.Info("ws conn closed unexpectedly", zap.Error(err))
-				bs.wsConn = nil
-				continue
-			}
-
-			if err != nil {
-				bs.logger.Error("failed to read response from bore client", zap.Error(err))
-				continue
-			}
-
-			err = proto.Unmarshal(res, response)
-			if err != nil {
-				bs.logger.Error("Failed to unmarshal response", zap.Error(err))
-				continue
-			}
-
-			bs.reqIdChanMap[response.Id] <- response
-		}
-	}()
-
 	return http.ListenAndServe(":8080", router)
 }
 
@@ -199,6 +211,7 @@ func NewBoreServer() *BoreServer {
 	return &BoreServer{
 		wsMutex:      &sync.Mutex{},
 		reqIdChanMap: make(map[string]chan *borepb.Response),
+		apps:         make(map[string]*websocket.Conn),
 		logger:       logger,
 	}
 }
