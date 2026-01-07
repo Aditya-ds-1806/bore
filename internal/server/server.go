@@ -150,6 +150,13 @@ func (bs *BoreServer) StartBoreServer() error {
 			}
 
 			_, res, err := bs.wsConn.ReadMessage()
+
+			if websocket.IsUnexpectedCloseError(err) {
+				bs.logger.Info("ws conn closed unexpectedly", zap.Error(err))
+				bs.wsConn = nil
+				continue
+			}
+
 			if err != nil {
 				bs.logger.Error("failed to read response from bore client", zap.Error(err))
 				continue
