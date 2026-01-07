@@ -59,6 +59,12 @@ func (bs *BoreServer) StartBoreServer() error {
 
 		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path))
 
+		if bs.wsConn == nil {
+			reqLogger.Error("No app found!")
+			http.Error(w, "No app found!", http.StatusBadRequest)
+			return
+		}
+
 		bs.reqIdChanMap[requestId] = make(chan *borepb.Response)
 
 		hopByHopHeaders := []string{
