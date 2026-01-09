@@ -1,3 +1,5 @@
+github.com/atrox/haikunatorgo/v2 v2.0.1 h1:FCVx2KL2YvZtI1rI9WeEHxeLRrKGr0Dd4wfCJiUXupc=
+github.com/atrox/haikunatorgo/v2 v2.0.1/go.mod h1:BBQmx2o+1Z5poziaHRgddAZKOpijwfKdAmMnSYlFK70=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-chi/chi/v5 v5.2.3 h1:WQIt9uxdsAbgIYgid+BpYc+liqQZGMHRaUwp0JUcvdE=

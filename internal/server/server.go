@@ -2,7 +2,6 @@ package server
 
 import (
 	borepb "bore/borepb"
-	"crypto/rand"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	haikunator "github.com/atrox/haikunatorgo/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -24,10 +24,11 @@ type BoreServer struct {
 	logger       *zap.Logger
 	reqIdChanMap map[string]chan *borepb.Response
 	apps         map[string]*websocket.Conn
+	haikunator   *haikunator.Haikunator
 }
 
 func (bs *BoreServer) generateAppId() string {
-	return strings.ToLower(rand.Text())
+	return bs.haikunator.Haikunate()
 }
 
 func (bs *BoreServer) handleApp(appId string, wsConn *websocket.Conn) {
@@ -211,10 +212,15 @@ func NewBoreServer() *BoreServer {
 		panic(err)
 	}
 
+	h := haikunator.New()
+	h.TokenLength = 5
+	h.TokenChars = "abcdefghijklmnopqrstuvwxyz0123456789"
+
 	return &BoreServer{
 		wsMutex:      &sync.Mutex{},
 		reqIdChanMap: make(map[string]chan *borepb.Response),
 		apps:         make(map[string]*websocket.Conn),
+		haikunator:   h,
 		logger:       logger,
 	}
 }
