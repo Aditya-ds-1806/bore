@@ -19,11 +19,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type App struct {
+	wsConn  *websocket.Conn
+	wsMutex *sync.Mutex
+}
+
 type BoreServer struct {
-	wsMutex      *sync.Mutex
 	logger       *zap.Logger
 	reqIdChanMap map[string]chan *borepb.Response
-	apps         map[string]*websocket.Conn
+	apps         map[string]App
 	haikunator   *haikunator.Haikunator
 }
 
@@ -31,10 +35,16 @@ func (bs *BoreServer) generateAppId() string {
 	return bs.haikunator.Haikunate()
 }
 
-func (bs *BoreServer) handleApp(appId string, wsConn *websocket.Conn) {
+func (bs *BoreServer) handleApp(appId string) {
 	defer func() { delete(bs.apps, appId) }()
 
-	if wsConn == nil {
+	app, ok := bs.apps[appId]
+	if !ok {
+		bs.logger.Error("No App found!")
+		return
+	}
+
+	if app.wsConn == nil {
 		bs.logger.Info("no wsConn for app", zap.String("appId", appId))
 		return
 	}
@@ -42,11 +52,10 @@ func (bs *BoreServer) handleApp(appId string, wsConn *websocket.Conn) {
 	for {
 		response := &borepb.Response{}
 
-		_, res, err := wsConn.ReadMessage()
+		_, res, err := app.wsConn.ReadMessage()
 
 		if websocket.IsUnexpectedCloseError(err) {
 			bs.logger.Info("ws conn closed unexpectedly", zap.Error(err))
-			bs.apps[appId] = nil
 			return
 		}
 
@@ -91,10 +100,13 @@ func (bs *BoreServer) StartBoreServer() error {
 
 		bs.logger.Info("connection upgraded to WS", zap.String("client_ip", clientIP))
 
-		bs.apps[appId] = conn
+		bs.apps[appId] = App{
+			wsConn:  conn,
+			wsMutex: &sync.Mutex{},
+		}
 		bs.logger.Info("registered app!", zap.String("app_id", appId))
 
-		go bs.handleApp(appId, conn)
+		go bs.handleApp(appId)
 	})
 
 	router.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +121,8 @@ func (bs *BoreServer) StartBoreServer() error {
 
 		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path), zap.String("appId", appId))
 
-		if bs.apps[appId] == nil {
+		app, ok := bs.apps[appId]
+		if !ok {
 			reqLogger.Error("No app found!")
 			http.Error(w, "No app found!", http.StatusBadRequest)
 			return
@@ -168,9 +181,9 @@ func (bs *BoreServer) StartBoreServer() error {
 			return
 		}
 
-		bs.wsMutex.Lock()
-		err = bs.apps[appId].WriteMessage(websocket.BinaryMessage, reqBytes)
-		bs.wsMutex.Unlock()
+		app.wsMutex.Lock()
+		err = app.wsConn.WriteMessage(websocket.BinaryMessage, reqBytes)
+		app.wsMutex.Unlock()
 		if err != nil {
 			reqLogger.Error("failed to write reqBytes to ws", zap.Error(err))
 			return
@@ -217,9 +230,8 @@ func NewBoreServer() *BoreServer {
 	h.TokenChars = "abcdefghijklmnopqrstuvwxyz0123456789"
 
 	return &BoreServer{
-		wsMutex:      &sync.Mutex{},
 		reqIdChanMap: make(map[string]chan *borepb.Response),
-		apps:         make(map[string]*websocket.Conn),
+		apps:         make(map[string]App),
 		haikunator:   h,
 		logger:       logger,
 	}
