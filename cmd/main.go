@@ -46,7 +46,14 @@ func RunBoreClient(logger *logger.Logger, wg *sync.WaitGroup) {
 		Logger:      logger,
 	})
 
-	fmt.Println("You app is live on:", fmt.Sprintf("http://%s", client.BoreServerHost))
+	go func() {
+		for {
+			if bc.AppId != nil {
+				fmt.Println("You app is live on:", fmt.Sprintf("https://%s.%s", *bc.AppId, client.BoreServerHost))
+				return
+			}
+		}
+	}()
 
 	err := bc.StartBoreClient()
 	if err != nil {

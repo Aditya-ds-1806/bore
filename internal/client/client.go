@@ -26,6 +26,7 @@ type BoreClient struct {
 	wsConn      *websocket.Conn
 	wsMutex     *sync.Mutex
 	Logger      *logger.Logger
+	AppId       *string
 	UpstreamURL string
 }
 
@@ -36,8 +37,13 @@ func (bc *BoreClient) NewWSConnection() error {
 	}
 
 	wsConnStr := fmt.Sprintf("wss://%s/ws", BoreServerHost)
-	conn, _, err := dialer.Dial(wsConnStr, nil)
-	bc.wsConn = conn
+	conn, res, err := dialer.Dial(wsConnStr, nil)
+
+	if err == nil {
+		appId := res.Header.Get("X-Bore-App-ID")
+		bc.wsConn = conn
+		bc.AppId = &appId
+	}
 
 	return err
 }

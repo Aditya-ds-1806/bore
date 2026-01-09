@@ -76,7 +76,12 @@ func (bs *BoreServer) StartBoreServer() error {
 			WriteBufferSize: 1024,
 		}
 
-		conn, err := upgrader.Upgrade(w, r, nil)
+		appId := bs.generateAppId()
+
+		conn, err := upgrader.Upgrade(w, r, http.Header{
+			"X-Bore-App-ID": {appId},
+		})
+
 		if err != nil {
 			bs.logger.Error("failed to upgrade connection to WS", zap.Error(err), zap.String("client_ip", clientIP))
 			http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
@@ -85,9 +90,7 @@ func (bs *BoreServer) StartBoreServer() error {
 
 		bs.logger.Info("connection upgraded to WS", zap.String("client_ip", clientIP))
 
-		appId := bs.generateAppId()
 		bs.apps[appId] = conn
-
 		bs.logger.Info("registered app!", zap.String("app_id", appId))
 
 		go bs.handleApp(appId, conn)
