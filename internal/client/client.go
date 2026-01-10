@@ -15,6 +15,7 @@ import (
 )
 
 var BoreServerHost string
+var WSScheme string
 
 type BoreClientConfig struct {
 	UpstreamURL string
@@ -38,7 +39,7 @@ func (bc *BoreClient) NewWSConnection() error {
 		WriteBufferSize: 1024,
 	}
 
-	wsConnStr := fmt.Sprintf("wss://%s/ws", BoreServerHost)
+	wsConnStr := fmt.Sprintf("%s://%s/ws", WSScheme, BoreServerHost)
 	conn, res, err := dialer.Dial(wsConnStr, nil)
 
 	if err == nil {
