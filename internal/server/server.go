@@ -52,6 +52,8 @@ func (bs *BoreServer) handleApp(appId string) {
 		return
 	}
 
+	go bs.ping(&app)
+
 	for {
 		response := &borepb.Response{}
 
@@ -74,6 +76,24 @@ func (bs *BoreServer) handleApp(appId string) {
 		}
 
 		bs.reqIdChanMap[response.Id] <- response
+	}
+}
+
+func (bs *BoreServer) ping(app *App) {
+	pingInterval := time.Duration(10 * time.Second)
+	ticker := time.NewTicker(pingInterval)
+
+	defer ticker.Stop()
+
+	for range ticker.C {
+		app.wsMutex.Lock()
+		err := app.wsConn.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second))
+		app.wsMutex.Unlock()
+
+		if err != nil {
+			bs.logger.Error("failed to send ping!", zap.Error(err))
+			return
+		}
 	}
 }
 
