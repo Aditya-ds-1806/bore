@@ -3,7 +3,6 @@ package web
 import (
 	"bore/internal/web/logger"
 	"bytes"
-	"fmt"
 	"html/template"
 	"net/http"
 )
@@ -16,7 +15,7 @@ func (ws *WebServer) StartServer() error {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("internal/web/templates/index.html")
 		if err != nil {
-			fmt.Println(err)
+			// fmt.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -24,13 +23,14 @@ func (ws *WebServer) StartServer() error {
 		var buf bytes.Buffer
 		err = tmpl.Execute(&buf, ws.Logger.GetLogs())
 		if err != nil {
-			fmt.Println(err)
+			// fmt.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		if _, err = buf.WriteTo(w); err != nil {
-			fmt.Println(err)
+			// fmt.Println(err)
+			return
 		}
 	})
 

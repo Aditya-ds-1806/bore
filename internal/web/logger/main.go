@@ -3,7 +3,6 @@ package logger
 import (
 	borepb "bore/borepb"
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"sort"
@@ -37,13 +36,14 @@ func NewLogger() *Logger {
 
 func (l *Logger) LogRequest(req *resty.Request) {
 	requestID := req.Context().Value(RequestIDKey).(string)
-	fmt.Println("Logging request:", requestID)
+	// fmt.Println("Logging request:", requestID)
 
 	request := borepb.Request{
-		Method:  req.Method,
-		Path:    req.URL,
-		Headers: l.flattenHeaders(req.Header),
-		Body:    req.Body.([]byte),
+		Method:    req.Method,
+		Path:      req.URL,
+		Headers:   l.flattenHeaders(req.Header),
+		Body:      req.Body.([]byte),
+		Timestamp: req.Time.UnixMilli(),
 	}
 
 	l.mutex.Lock()
@@ -57,7 +57,7 @@ func (l *Logger) LogRequest(req *resty.Request) {
 
 func (l *Logger) LogResponse(res *resty.Response) {
 	requestID := res.Request.Context().Value(RequestIDKey).(string)
-	fmt.Println("Logging response:", requestID)
+	// fmt.Println("Logging response:", requestID)
 
 	requestTimestamp := res.Request.Time.UnixMilli()
 	responseTimestamp := res.ReceivedAt().UnixMilli()
@@ -71,7 +71,7 @@ func (l *Logger) LogResponse(res *resty.Response) {
 	if res.Body != nil {
 		bodyBytes, err := io.ReadAll(res.Body)
 		if err != nil {
-			fmt.Println("Error reading response body:", err)
+			// fmt.Println("Error reading response body:", err)
 			return
 		}
 
@@ -84,11 +84,10 @@ func (l *Logger) LogResponse(res *resty.Response) {
 	defer l.mutex.Unlock()
 
 	if _, ok := l.logs[requestID]; !ok {
-		fmt.Println("No request found for response logging")
+		// fmt.Println("No request found for response logging")
 		return
 	}
 
-	l.logs[requestID].Request.Timestamp = requestTimestamp
 	l.logs[requestID].Response = &response
 	l.logs[requestID].Duration = responseTimestamp - requestTimestamp
 }
