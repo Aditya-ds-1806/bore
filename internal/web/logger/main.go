@@ -39,11 +39,10 @@ func (l *Logger) LogRequest(req *resty.Request) {
 	// fmt.Println("Logging request:", requestID)
 
 	request := borepb.Request{
-		Method:    req.Method,
-		Path:      req.URL,
-		Headers:   l.flattenHeaders(req.Header),
-		Body:      req.Body.([]byte),
-		Timestamp: req.Time.UnixMilli(),
+		Method:  req.Method,
+		Path:    req.URL,
+		Headers: l.flattenHeaders(req.Header),
+		Body:    req.Body.([]byte),
 	}
 
 	l.mutex.Lock()
@@ -52,6 +51,7 @@ func (l *Logger) LogRequest(req *resty.Request) {
 	l.logs[requestID] = &Log{
 		RequestID: requestID,
 		Request:   &request,
+		Response:  &borepb.Response{},
 	}
 }
 
@@ -88,6 +88,7 @@ func (l *Logger) LogResponse(res *resty.Response) {
 		return
 	}
 
+	l.logs[requestID].Request.Timestamp = requestTimestamp
 	l.logs[requestID].Response = &response
 	l.logs[requestID].Duration = responseTimestamp - requestTimestamp
 }
