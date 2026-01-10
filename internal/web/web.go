@@ -2,6 +2,7 @@ package web
 
 import (
 	"bore/internal/web/logger"
+	"bytes"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -16,16 +17,20 @@ func (ws *WebServer) StartServer() error {
 		tmpl, err := template.ParseFiles("internal/web/templates/index.html")
 		if err != nil {
 			fmt.Println(err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		err = tmpl.Execute(w, ws.Logger.GetLogs())
-
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, ws.Logger.GetLogs())
 		if err != nil {
 			fmt.Println(err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if _, err = buf.WriteTo(w); err != nil {
+			fmt.Println(err)
 		}
 	})
 
