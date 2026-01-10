@@ -3,15 +3,38 @@ package main
 import (
 	"bore/internal/client"
 	"bore/internal/server"
+	"bore/internal/ui"
 	"bore/internal/web"
 	"bore/internal/web/logger"
 	"flag"
 	"fmt"
 	"os"
 	"sync"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 var AppMode string
+
+type Flags struct {
+	UpstreamURL string
+}
+
+func ParseFlags() Flags {
+	upstreamURL := flag.String("url", "", "Upstream URL to proxy requests to")
+	flag.StringVar(upstreamURL, "u", "", "Upstream URL to proxy requests to")
+
+	flag.Parse()
+
+	if *upstreamURL == "" {
+		fmt.Println("Upstream URL is required. Use -url or -u to specify it.")
+		os.Exit(1)
+	}
+
+	return Flags{
+		UpstreamURL: *upstreamURL,
+	}
+}
 
 func RunBoreServer(wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -27,41 +50,6 @@ func RunBoreServer(wg *sync.WaitGroup) {
 	}
 }
 
-func RunBoreClient(logger *logger.Logger, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	upstreamURL := flag.String("url", "", "Upstream URL to proxy requests to")
-	flag.StringVar(upstreamURL, "u", "", "Upstream URL to proxy requests to")
-
-	flag.Parse()
-
-	if *upstreamURL == "" {
-		fmt.Println("Upstream URL is required. Use -url or -u to specify it.")
-		os.Exit(1)
-		return
-	}
-
-	bc := client.NewBoreClient(&client.BoreClientConfig{
-		UpstreamURL: *upstreamURL,
-		Logger:      logger,
-	})
-
-	go func() {
-		for {
-			if bc.AppId != nil {
-				fmt.Println("You app is live on:", fmt.Sprintf("https://%s.%s", *bc.AppId, client.BoreServerHost))
-				return
-			}
-		}
-	}()
-
-	err := bc.StartBoreClient()
-	if err != nil {
-		fmt.Println("Failed to start bore client")
-		panic(err)
-	}
-}
-
 func RunBoreWebClient(logger *logger.Logger, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -72,26 +60,48 @@ func RunBoreWebClient(logger *logger.Logger, wg *sync.WaitGroup) {
 
 	err := ws.StartServer()
 	if err != nil {
-		fmt.Println("Failed to start bore client")
+		fmt.Println("Failed to start bore web client")
 		panic(err)
 	}
 }
 
 func main() {
 	var wg sync.WaitGroup
+	defer wg.Wait()
 
 	if AppMode == "server" {
 		wg.Add(1)
 		go RunBoreServer(&wg)
-	} else {
-		var logger = logger.NewLogger()
-
-		wg.Add(1)
-		go RunBoreClient(logger, &wg)
-
-		wg.Add(1)
-		go RunBoreWebClient(logger, &wg)
+		return
 	}
 
-	wg.Wait()
+	flags := ParseFlags()
+	logger := logger.NewLogger()
+
+	bc := client.NewBoreClient(&client.BoreClientConfig{
+		UpstreamURL: flags.UpstreamURL,
+		Logger:      logger,
+	})
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := bc.RegisterApp()
+
+		if err != nil {
+			fmt.Println("Failed to start bore client")
+			panic(err)
+		}
+	}()
+
+	<-bc.Ready
+
+	wg.Add(1)
+	go RunBoreWebClient(logger, &wg)
+
+	p := tea.NewProgram(ui.NewModel(logger.GetLogs, bc.AppURL), tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("failed to run TUI: %v", err)
+		os.Exit(1)
+	}
 }

@@ -26,8 +26,10 @@ type BoreClient struct {
 	wsConn      *websocket.Conn
 	wsMutex     *sync.Mutex
 	Logger      *logger.Logger
-	AppId       *string
+	AppId       string
+	AppURL      string
 	UpstreamURL string
+	Ready       chan struct{}
 }
 
 func (bc *BoreClient) NewWSConnection() error {
@@ -42,32 +44,32 @@ func (bc *BoreClient) NewWSConnection() error {
 	if err == nil {
 		appId := res.Header.Get("X-Bore-App-ID")
 		bc.wsConn = conn
-		bc.AppId = &appId
+		bc.AppId = appId
+		bc.AppURL = fmt.Sprintf("https://%s.%s", appId, BoreServerHost)
+		bc.Ready <- struct{}{}
+		close(bc.Ready)
 	}
 
 	return err
 }
 
-func (bc *BoreClient) HandleWSMessages() {
+func (bc *BoreClient) HandleWSMessages() error {
+	defer bc.resty.Close()
+
 	for {
-		messageType, message, err := bc.wsConn.ReadMessage()
+		_, message, err := bc.wsConn.ReadMessage()
 		if err != nil {
-			fmt.Println("Error from client:", messageType, err)
-			break
+			return err
 		}
 
 		var request borepb.Request
 
 		err = proto.Unmarshal(message, &request)
 		if err != nil {
-			fmt.Println("Failed to unmarshal request:", err)
-			return
+			return err
 		}
 
-		cookies, err := http.ParseCookie(request.Cookies)
-		if err != nil {
-			fmt.Println("Failed to parse cookies:", err)
-		}
+		cookies, _ := http.ParseCookie(request.Cookies)
 
 		ctx := context.WithValue(context.TODO(), logger.RequestIDKey, request.Id)
 
@@ -84,8 +86,7 @@ func (bc *BoreClient) HandleWSMessages() {
 
 		res, err := req.Send()
 		if err != nil {
-			fmt.Println("Error fetching data:", err)
-			return
+			return err
 		}
 
 		bc.Logger.LogResponse(res)
@@ -104,38 +105,37 @@ func (bc *BoreClient) HandleWSMessages() {
 
 		resBytes, err := proto.Marshal(&response)
 		if err != nil {
-			fmt.Println("Failed to marshal response:", err)
-			return
+			return err
 		}
 
 		bc.wsMutex.Lock()
 		err = bc.wsConn.WriteMessage(websocket.BinaryMessage, resBytes)
 		bc.wsMutex.Unlock()
 		if err != nil {
-			fmt.Println("Failed to write resBytes to ws:", err)
-			return
+			return err
 		}
 	}
 }
 
-func (bc *BoreClient) StartBoreClient() error {
-	bc.resty = resty.New().SetBaseURL(bc.UpstreamURL)
-	defer bc.resty.Close()
-
+func (bc *BoreClient) RegisterApp() error {
 	err := bc.NewWSConnection()
 	if err != nil {
 		return err
 	}
 
-	bc.HandleWSMessages()
+	err = bc.HandleWSMessages()
 
-	return nil
+	return err
 }
 
 func NewBoreClient(cfg *BoreClientConfig) *BoreClient {
+	resty := resty.New().SetBaseURL(cfg.UpstreamURL)
+
 	return &BoreClient{
+		resty:       resty,
 		UpstreamURL: cfg.UpstreamURL,
 		Logger:      cfg.Logger,
 		wsMutex:     &sync.Mutex{},
+		Ready:       make(chan struct{}),
 	}
 }
