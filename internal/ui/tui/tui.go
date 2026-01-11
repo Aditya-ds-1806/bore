@@ -21,6 +21,7 @@ type model struct {
 	appURL      string
 	filterMode  bool
 	filterQuery string
+	cursorPos   int
 	filterError string
 	filters     []*Filter
 }
@@ -50,6 +51,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "esc":
 				m.filterMode = false
 				m.filterQuery = ""
+				m.cursorPos = 0
 				m.filterError = ""
 				return m, nil
 			case "enter":
@@ -60,17 +62,41 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.filters = filters
 					m.filterError = ""
 					m.filterMode = false
+					m.cursorPos = 0
 					m.updateTableRows()
 				}
 				return m, nil
+			case "left":
+				if m.cursorPos > 0 {
+					m.cursorPos--
+				}
+				return m, nil
+			case "right":
+				if m.cursorPos < len(m.filterQuery) {
+					m.cursorPos++
+				}
+				return m, nil
+			case "home", "ctrl+a":
+				m.cursorPos = 0
+				return m, nil
+			case "end", "ctrl+e":
+				m.cursorPos = len(m.filterQuery)
+				return m, nil
 			case "backspace":
-				if len(m.filterQuery) > 0 {
-					m.filterQuery = m.filterQuery[:len(m.filterQuery)-1]
+				if m.cursorPos > 0 && len(m.filterQuery) > 0 {
+					m.filterQuery = m.filterQuery[:m.cursorPos-1] + m.filterQuery[m.cursorPos:]
+					m.cursorPos--
+				}
+				return m, nil
+			case "delete", "ctrl+d":
+				if m.cursorPos < len(m.filterQuery) {
+					m.filterQuery = m.filterQuery[:m.cursorPos] + m.filterQuery[m.cursorPos+1:]
 				}
 				return m, nil
 			default:
 				if len(msg.String()) == 1 {
-					m.filterQuery += msg.String()
+					m.filterQuery = m.filterQuery[:m.cursorPos] + msg.String() + m.filterQuery[m.cursorPos:]
+					m.cursorPos++
 				}
 				return m, nil
 			}
@@ -82,8 +108,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "f":
 			m.filterMode = !m.filterMode
-			if m.filterMode && len(m.filters) > 0 {
-				m.filterQuery = formatFilterQuery(m.filters)
+			if m.filterMode {
+				if len(m.filters) > 0 {
+					m.filterQuery = formatFilterQuery(m.filters)
+				}
+				m.cursorPos = len(m.filterQuery)
 			}
 			return m, nil
 		case "c":
@@ -162,11 +191,14 @@ func (m model) View() string {
 	var filterLine string
 	if m.filterMode {
 		exampleText := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("Ex: method:GET path:/api status:>=200 |")
-		filterInput := lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Bold(true).Render(" Filter: " + m.filterQuery + "_ ")
+
+		// Insert cursor at current position
+		queryWithCursor := m.filterQuery[:m.cursorPos] + "_" + m.filterQuery[m.cursorPos:]
+		filterInput := lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Bold(true).Render(" Filter: " + queryWithCursor + " ")
 		helpText := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Render("| Enter:apply Esc:cancel")
 
 		// Calculate padding to center the input
-		totalLen := len("Ex: method:GET path:/api status:>=200 |") + len(" Filter: ") + len(m.filterQuery) + len("_ ") + len("| Enter:apply Esc:cancel")
+		totalLen := len("Ex: method:GET path:/api status:>=200 |") + len(" Filter: ") + len(queryWithCursor) + len(" ") + len("| Enter:apply Esc:cancel")
 		leftPadding := (m.width - totalLen) / 2
 		if leftPadding < 0 {
 			leftPadding = 0
