@@ -152,35 +152,39 @@ func (m model) View() string {
 
 	webInspectorLine := lipgloss.
 		NewStyle().
-		Foreground(lipgloss.Color("240")).
+		Bold(true).
+		Foreground(lipgloss.Color("111")).
 		Width(m.width).
 		Align(lipgloss.Center).
 		Render("Web Inspector URL: http://localhost:8000")
 
 	// Filter input area - always single line to prevent jitter
-	var filterText string
+	var filterLine string
 	if m.filterMode {
-		filterInput := lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("Filter: " + m.filterQuery + "_")
-		helpText := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" | Enter:apply Esc:cancel | Ex: method:GET path:/api status:200 type:json time:<200")
-		filterText = filterInput + helpText
+		exampleText := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("Ex: method:GET path:/api status:>=200 |")
+		filterInput := lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Bold(true).Render(" Filter: " + m.filterQuery + "_ ")
+		helpText := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Render("| Enter:apply Esc:cancel")
+
+		// Calculate padding to center the input
+		totalLen := len("Ex: method:GET path:/api status:>=200 |") + len(" Filter: ") + len(m.filterQuery) + len("_ ") + len("| Enter:apply Esc:cancel")
+		leftPadding := (m.width - totalLen) / 2
+		if leftPadding < 0 {
+			leftPadding = 0
+		}
+
+		filterLine = strings.Repeat(" ", leftPadding) + exampleText + filterInput + helpText
 	} else if m.filterError != "" {
 		errorText := lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("Error: " + m.filterError)
 		helpText := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" | Press 'f' to retry")
-		filterText = errorText + helpText
+		filterLine = lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(errorText + helpText)
 	} else {
 		helpText := "f:filter"
 		if len(m.filters) > 0 {
 			helpText += " | Active: " + formatFilterQuery(m.filters)
 		}
 		helpText += " | c:clear"
-		filterText = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(helpText)
+		filterLine = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Width(m.width).Align(lipgloss.Center).Render(helpText)
 	}
-
-	filterLine := lipgloss.
-		NewStyle().
-		Width(m.width).
-		Align(lipgloss.Center).
-		Render(filterText)
 
 	requestLoggerTable := lipgloss.
 		NewStyle().
@@ -188,7 +192,7 @@ func (m model) View() string {
 		Height(m.height - 4).
 		Render(m.table.View())
 
-	return urlLine + "\n" + webInspectorLine + "\n" + filterLine + "\n" + requestLoggerTable
+	return urlLine + "\n" + webInspectorLine + "\n" + requestLoggerTable + "\n" + filterLine
 }
 
 func getColumns(width int) []table.Column {
@@ -343,19 +347,20 @@ func parseFilterQuery(query string) ([]*Filter, error) {
 		}
 
 		// Handle units for time and size fields
-		if field == "time" {
+		switch field {
+		case "time":
 			parsedValue, err := parseTimeValue(value)
 			if err != nil {
 				return nil, fmt.Errorf("invalid time value: %s", value)
 			}
 			value = fmt.Sprintf("%d", parsedValue)
-		} else if field == "size" {
+		case "size":
 			parsedValue, err := parseSizeValue(value)
 			if err != nil {
 				return nil, fmt.Errorf("invalid size value: %s", value)
 			}
 			value = fmt.Sprintf("%d", parsedValue)
-		} else if field == "status" {
+		case "status":
 			// Validate status value
 			if _, err := strconv.ParseInt(value, 10, 64); err != nil {
 				return nil, fmt.Errorf("invalid status value: %s", value)
