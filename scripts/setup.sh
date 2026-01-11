@@ -20,6 +20,10 @@ cd bore
 go mod tidy
 make build-server
 
+# configure logrotate
+mkdir -p /etc/logrotate.d/bore
+sudo cp ../logrotate.conf /etc/logrotate.d/bore
+
 # nginx and systemd setup
 sudo cp ./nginx.conf /etc/nginx/nginx.conf
 sudo cp ./bore.service /etc/systemd/system/bore.service
