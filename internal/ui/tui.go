@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"bore/internal/ui/web/logger"
+	"bore/internal/ui/logger"
 )
 
 type model struct {

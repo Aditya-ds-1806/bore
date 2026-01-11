@@ -1,7 +1,7 @@
 package web
 
 import (
-	"bore/internal/ui/web/logger"
+	"bore/internal/ui/logger"
 	"bytes"
 	"html/template"
 	"net/http"
