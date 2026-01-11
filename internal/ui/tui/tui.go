@@ -90,17 +90,21 @@ func getColumns(width int) []table.Column {
 		width = 80
 	}
 
-	width = width - 8 // leave room for borders/padding
-	methodWidth := width * 10 / 100
-	statusWidth := width * 10 / 100
-	respTimeWidth := width * 25 / 100
-	uriWidth := width - methodWidth - statusWidth - respTimeWidth
+	width = width - 12 // leave room for borders/padding
+	methodWidth := width * 8 / 100
+	statusWidth := width * 8 / 100
+	respTimeWidth := width * 18 / 100
+	contentTypeWidth := width * 20 / 100
+	sizeWidth := width * 10 / 100
+	uriWidth := width - methodWidth - statusWidth - respTimeWidth - contentTypeWidth - sizeWidth
 
 	return []table.Column{
 		{Title: "Method", Width: methodWidth},
 		{Title: "URI", Width: uriWidth},
 		{Title: "Status", Width: statusWidth},
-		{Title: "Response Time (ms)", Width: respTimeWidth},
+		{Title: "Content-Type", Width: contentTypeWidth},
+		{Title: "Size", Width: sizeWidth},
+		{Title: "Time (ms)", Width: respTimeWidth},
 	}
 }
 
@@ -111,6 +115,8 @@ func logsToRows(logs []*logger.Log) []table.Row {
 		method := ""
 		uri := ""
 		status := ""
+		contentType := ""
+		size := ""
 		respTime := ""
 
 		if log.Request != nil {
@@ -120,13 +126,30 @@ func logsToRows(logs []*logger.Log) []table.Row {
 
 		if log.Response != nil {
 			status = fmt.Sprintf("%d", log.Response.StatusCode)
+
+			if ct, ok := log.Response.Headers["Content-Type"]; ok {
+				contentType = ct
+			}
+
+			if log.Response.Body != nil {
+				size = formatSize(len(log.Response.Body))
+			}
 		}
 
 		respTime = fmt.Sprintf("%d", log.Duration)
-		rows = append(rows, table.Row{method, uri, status, respTime})
+		rows = append(rows, table.Row{method, uri, status, contentType, size, respTime})
 	}
 
 	return rows
+}
+
+func formatSize(bytes int) string {
+	if bytes < 1024 {
+		return fmt.Sprintf("%d B", bytes)
+	} else if bytes < 1024*1024 {
+		return fmt.Sprintf("%.1f KB", float64(bytes)/1024)
+	}
+	return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
 }
 
 func NewModel(getLogs func() []*logger.Log, appURL string) model {
