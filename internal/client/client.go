@@ -2,7 +2,7 @@ package client
 
 import (
 	borepb "bore/borepb"
-	"bore/internal/web/logger"
+	"bore/internal/ui/web/logger"
 	"context"
 	"fmt"
 	"net/http"
