@@ -3,8 +3,8 @@ package main
 import (
 	"bore/internal/client"
 	"bore/internal/server"
-	"bore/internal/ui"
 	"bore/internal/ui/logger"
+	"bore/internal/ui/tui"
 	"bore/internal/ui/web"
 	"flag"
 	"fmt"
@@ -99,7 +99,7 @@ func main() {
 	wg.Add(1)
 	go RunBoreWebClient(logger, &wg)
 
-	p := tea.NewProgram(ui.NewModel(logger.GetLogs, bc.AppURL), tea.WithAltScreen())
+	p := tea.NewProgram(tui.NewModel(logger.GetLogs, bc.AppURL), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("failed to run TUI: %v", err)
 		os.Exit(1)
