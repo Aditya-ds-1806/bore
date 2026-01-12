@@ -1,7 +1,7 @@
 package web
 
 import (
-	"bore/internal/ui/logger"
+	"bore/internal/client"
 	"bytes"
 	"html/template"
 	"net/http"
@@ -9,7 +9,7 @@ import (
 )
 
 type WebServer struct {
-	Logger *logger.Logger
+	Logger *client.Logger
 }
 
 func (ws *WebServer) StartServer() error {

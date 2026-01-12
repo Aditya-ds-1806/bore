@@ -3,7 +3,6 @@ package main
 import (
 	"bore/internal/client"
 	"bore/internal/server"
-	"bore/internal/ui/logger"
 	"bore/internal/ui/tui"
 	"bore/internal/ui/web"
 	"flag"
@@ -50,7 +49,7 @@ func RunBoreServer(wg *sync.WaitGroup) {
 	}
 }
 
-func RunBoreWebClient(logger *logger.Logger, wg *sync.WaitGroup) {
+func RunBoreWebClient(logger *client.Logger, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	fmt.Println("Web Server is running on http://localhost:8000/")
@@ -76,7 +75,7 @@ func main() {
 	}
 
 	flags := ParseFlags()
-	logger := logger.NewLogger()
+	logger := client.NewLogger()
 
 	bc := client.NewBoreClient(&client.BoreClientConfig{
 		UpstreamURL: flags.UpstreamURL,
@@ -89,8 +88,8 @@ func main() {
 		err := bc.RegisterApp()
 
 		if err != nil {
-			fmt.Println("Failed to start bore client")
-			panic(err)
+			fmt.Printf("Failed to start bore client: %v\n", err)
+			os.Exit(1)
 		}
 	}()
 

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bore/internal/client"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,15 +10,13 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-
-	"bore/internal/ui/logger"
 )
 
 type model struct {
 	table       table.Model
 	width       int
 	height      int
-	getLogs     func() []*logger.Log
+	getLogs     func() []*client.Log
 	appURL      string
 	filterMode  bool
 	filterQuery string
@@ -154,7 +153,7 @@ func (m *model) updateTableRows() {
 	}
 
 	// Apply all filters
-	filteredLogs := []*logger.Log{}
+	filteredLogs := []*client.Log{}
 	for _, log := range logs {
 		match := true
 		for _, filter := range m.filters {
@@ -250,7 +249,7 @@ func getColumns(width int) []table.Column {
 	}
 }
 
-func logsToRows(logs []*logger.Log) []table.Row {
+func logsToRows(logs []*client.Log) []table.Row {
 	var rows []table.Row
 
 	for _, log := range logs {
@@ -294,7 +293,7 @@ func formatSize(bytes int) string {
 	return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
 }
 
-func NewModel(getLogs func() []*logger.Log, appURL string) model {
+func NewModel(getLogs func() []*client.Log, appURL string) model {
 	columns := getColumns(80)
 
 	var rows []table.Row
@@ -413,7 +412,7 @@ func parseFilterQuery(query string) ([]*Filter, error) {
 	return filters, nil
 }
 
-func matchesFilter(log *logger.Log, filter *Filter) bool {
+func matchesFilter(log *client.Log, filter *Filter) bool {
 	switch filter.Field {
 	case "method":
 		if log.Request == nil {

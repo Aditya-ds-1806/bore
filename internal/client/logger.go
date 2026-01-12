@@ -1,4 +1,4 @@
-package logger
+package client
 
 import (
 	borepb "bore/borepb"
