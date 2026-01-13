@@ -1,6 +1,7 @@
 main
 bore
 bore-server
+bore-test
 *.pem
 logs
 nginx.local.conf
