@@ -1,4 +1,4 @@
-package client
+package reqlogger
 
 import (
 	borepb "bore/borepb"
@@ -107,6 +107,42 @@ func (l *Logger) GetLogs() []*Log {
 	})
 
 	return allLogs
+}
+
+func (l *Logger) GetFilteredLogs(filterQuery string) ([]*Log, error) {
+	parsedFilters, err := ParseQuery(filterQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	allLogs := l.GetLogs()
+
+	if len(parsedFilters) == 0 {
+		return allLogs, nil
+	}
+
+	filteredLogs := []*Log{}
+	for _, log := range allLogs {
+		match := true
+		for _, filter := range parsedFilters {
+			if !MatchesFilter(log, filter) {
+				match = false
+				break
+			}
+		}
+		if match {
+			filteredLogs = append(filteredLogs, log)
+		}
+	}
+
+	return filteredLogs, nil
+}
+
+func (l *Logger) GetLogByID(requestID string) *Log {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	return l.logs[requestID]
 }
 
 func (l *Logger) flattenHeaders(headers http.Header) map[string]string {

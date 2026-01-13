@@ -2,6 +2,7 @@ package main
 
 import (
 	"bore/internal/client"
+	"bore/internal/client/reqlogger"
 	"bore/internal/server"
 	"bore/internal/ui/tui"
 	"bore/internal/ui/web"
@@ -49,7 +50,7 @@ func RunBoreServer(wg *sync.WaitGroup) {
 	}
 }
 
-func RunBoreWebClient(logger *client.Logger, wg *sync.WaitGroup) {
+func RunBoreWebClient(logger *reqlogger.Logger, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	fmt.Println("Web Server is running on http://localhost:8000/")
@@ -75,7 +76,7 @@ func main() {
 	}
 
 	flags := ParseFlags()
-	logger := client.NewLogger()
+	logger := reqlogger.NewLogger()
 
 	bc := client.NewBoreClient(&client.BoreClientConfig{
 		UpstreamURL: flags.UpstreamURL,
@@ -98,7 +99,7 @@ func main() {
 	wg.Add(1)
 	go RunBoreWebClient(logger, &wg)
 
-	p := tea.NewProgram(tui.NewModel(logger.GetLogs, bc.AppURL), tea.WithAltScreen())
+	p := tea.NewProgram(tui.NewModel(logger, bc.AppURL), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("failed to run TUI: %v", err)
 		os.Exit(1)
