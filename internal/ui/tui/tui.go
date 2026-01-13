@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"bore/internal/client"
+	"bore/internal/client/reqlogger"
 	"fmt"
 	"strings"
 	"time"
@@ -15,13 +15,12 @@ type model struct {
 	table       table.Model
 	width       int
 	height      int
-	logger      *client.Logger
+	logger      *reqlogger.Logger
 	appURL      string
 	filterMode  bool
 	filterQuery string
 	cursorPos   int
 	filterError string
-	filters     []*client.Filter
 }
 
 type tickMsg struct{}
@@ -47,16 +46,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.filterError = ""
 				return m, nil
 			case "enter":
-				parsedFilters, err := client.ParseQuery(m.filterQuery)
-				if err != nil {
-					m.filterError = err.Error()
-				} else {
-					m.filters = parsedFilters
-					m.filterError = ""
-					m.filterMode = false
-					m.cursorPos = 0
-					m.updateTableRows()
-				}
+				m.filterError = ""
+				m.filterMode = false
+				m.cursorPos = 0
+				m.updateTableRows()
 				return m, nil
 			case "left":
 				if m.cursorPos > 0 {
@@ -101,14 +94,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "f":
 			m.filterMode = !m.filterMode
 			if m.filterMode {
-				if len(m.filters) > 0 {
-					m.filterQuery = client.FormatQuery(m.filters)
-				}
 				m.cursorPos = len(m.filterQuery)
 			}
 			return m, nil
 		case "c":
-			m.filters = nil
 			m.filterQuery = ""
 			m.filterError = ""
 			m.updateTableRows()
@@ -135,19 +124,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) updateTableRows() {
-	if m.logger == nil {
+	if m.logger == nil || m.filterMode {
 		return
 	}
 
-	var logs []*client.Log
-	if len(m.filters) == 0 {
+	var logs []*reqlogger.Log
+	if m.filterQuery == "" {
 		logs = m.logger.GetLogs()
 	} else {
-		filterQuery := client.FormatQuery(m.filters)
 		var err error
-		logs, err = m.logger.GetFilteredLogs(filterQuery)
+		logs, err = m.logger.GetFilteredLogs(m.filterQuery)
 		if err != nil {
-			logs = []*client.Log{}
+			m.filterError = err.Error()
 		}
 	}
 
@@ -195,8 +183,8 @@ func (m model) View() string {
 		filterLine = lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(errorText + helpText)
 	} else {
 		helpText := "f:filter"
-		if len(m.filters) > 0 {
-			helpText += " | Active: " + client.FormatQuery(m.filters)
+		if m.filterQuery != "" {
+			helpText += " | Active: " + m.filterQuery
 		}
 		helpText += " | c:clear"
 		filterLine = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Width(m.width).Align(lipgloss.Center).Render(helpText)
@@ -234,7 +222,7 @@ func getColumns(width int) []table.Column {
 	}
 }
 
-func logsToRows(logs []*client.Log) []table.Row {
+func logsToRows(logs []*reqlogger.Log) []table.Row {
 	var rows []table.Row
 
 	for _, log := range logs {
@@ -278,7 +266,7 @@ func formatSize(bytes int) string {
 	return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
 }
 
-func NewModel(logger *client.Logger, appURL string) model {
+func NewModel(logger *reqlogger.Logger, appURL string) model {
 	columns := getColumns(80)
 
 	var rows []table.Row
