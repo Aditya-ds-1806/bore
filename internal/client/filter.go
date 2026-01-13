@@ -12,9 +12,12 @@ type Filter struct {
 	Value string
 }
 
-// ParseQuery parses a filter query string into a list of filters
-// Query format: "field:value field:operator+value ..."
-// Example: "method:GET path:/api status:>=200"
+/*
+ParseQuery parses a filter query string into a list of filters
+Query format:"field:value field:operator+value ..."
+
+Example: `"method:GET path:/api status:>=200"`
+*/
 func ParseQuery(query string) ([]*Filter, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
@@ -65,12 +68,14 @@ func ParseQuery(query string) ([]*Filter, error) {
 				return nil, fmt.Errorf("invalid time value: %s", value)
 			}
 			value = fmt.Sprintf("%d", parsedValue)
+
 		case "size":
 			parsedValue, err := parseSizeValue(value)
 			if err != nil {
 				return nil, fmt.Errorf("invalid size value: %s", value)
 			}
 			value = fmt.Sprintf("%d", parsedValue)
+
 		case "status":
 			if _, err := strconv.ParseInt(value, 10, 64); err != nil {
 				return nil, fmt.Errorf("invalid status value: %s", value)
@@ -188,7 +193,9 @@ func parseTimeValue(value string) (int64, error) {
 	if strings.HasSuffix(value, "ms") {
 		numStr := strings.TrimSuffix(value, "ms")
 		return strconv.ParseInt(strings.TrimSpace(numStr), 10, 64)
-	} else if strings.HasSuffix(value, "s") {
+	}
+
+	if strings.HasSuffix(value, "s") {
 		numStr := strings.TrimSuffix(value, "s")
 		num, err := strconv.ParseInt(strings.TrimSpace(numStr), 10, 64)
 		if err != nil {
@@ -210,21 +217,27 @@ func parseSizeValue(value string) (int64, error) {
 			return 0, err
 		}
 		return int64(num * 1024 * 1024 * 1024), nil
-	} else if strings.HasSuffix(value, "mb") {
+	}
+
+	if strings.HasSuffix(value, "mb") {
 		numStr := strings.TrimSuffix(value, "mb")
 		num, err := strconv.ParseFloat(strings.TrimSpace(numStr), 64)
 		if err != nil {
 			return 0, err
 		}
 		return int64(num * 1024 * 1024), nil
-	} else if strings.HasSuffix(value, "kb") {
+	}
+
+	if strings.HasSuffix(value, "kb") {
 		numStr := strings.TrimSuffix(value, "kb")
 		num, err := strconv.ParseFloat(strings.TrimSpace(numStr), 64)
 		if err != nil {
 			return 0, err
 		}
 		return int64(num * 1024), nil
-	} else if strings.HasSuffix(value, "b") {
+	}
+
+	if strings.HasSuffix(value, "b") {
 		numStr := strings.TrimSuffix(value, "b")
 		return strconv.ParseInt(strings.TrimSpace(numStr), 10, 64)
 	}
