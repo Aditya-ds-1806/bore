@@ -327,6 +327,51 @@ func (m *model) renderLogDetails() string {
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86")).MarginTop(1)
 	subHeaderStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("111")).MarginTop(1)
 
+	// Helper function to render body content
+	renderBody := func(title string, body []byte, contentType string) string {
+		if body == nil {
+			return ""
+		}
+
+		// Whitelisted MIME types for body rendering
+		whitelistedMimeTypes := []string{
+			"json",
+			"xml",
+			"form-data",
+			"x-www-form-urlencoded",
+			"text/",
+			"javascript",
+		}
+
+		contentType = strings.ToLower(contentType)
+		isWhitelisted := false
+		for _, mimeType := range whitelistedMimeTypes {
+			if strings.Contains(contentType, mimeType) {
+				isWhitelisted = true
+				break
+			}
+		}
+
+		if !isWhitelisted {
+			return ""
+		}
+
+		var result strings.Builder
+		result.WriteString("\n")
+		result.WriteString(subHeaderStyle.Render(title))
+		result.WriteString("\n")
+		bodyStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("255")).
+			Background(lipgloss.Color("235")).
+			Padding(1).
+			Width(m.width - 8)
+
+		result.WriteString(bodyStyle.Render(string(body)))
+		result.WriteString("\n")
+
+		return result.String()
+	}
+
 	// Helper function to render key-value pairs with proper wrapping
 	renderKV := func(key, value string, indent int) string {
 		keyWidth := 30
@@ -392,6 +437,15 @@ func (m *model) renderLogDetails() string {
 				content.WriteString(renderKV(k, v, 2))
 			}
 		}
+
+		// Request Body
+		if req.Body != nil {
+			contentType := ""
+			if ct, ok := req.Headers["Content-Type"]; ok {
+				contentType = ct
+			}
+			content.WriteString(renderBody("Request Body:", req.Body, contentType))
+		}
 	}
 
 	if log.Response != nil {
@@ -452,6 +506,15 @@ func (m *model) renderLogDetails() string {
 				v := res.Headers[k]
 				content.WriteString(renderKV(k, v, 2))
 			}
+		}
+
+		// Response Body
+		if res.Body != nil {
+			contentType := ""
+			if ct, ok := res.Headers["Content-Type"]; ok {
+				contentType = ct
+			}
+			content.WriteString(renderBody("Response Body:", res.Body, contentType))
 		}
 	}
 
