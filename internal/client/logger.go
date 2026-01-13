@@ -138,6 +138,13 @@ func (l *Logger) GetFilteredLogs(filterQuery string) ([]*Log, error) {
 	return filteredLogs, nil
 }
 
+func (l *Logger) GetLogByID(requestID string) *Log {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	return l.logs[requestID]
+}
+
 func (l *Logger) flattenHeaders(headers http.Header) map[string]string {
 	headersMap := make(map[string]string)
 

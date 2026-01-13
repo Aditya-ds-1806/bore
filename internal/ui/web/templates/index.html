@@ -300,6 +300,7 @@
         // Load initial data on page load
         window.addEventListener('DOMContentLoaded', () => {
             applyFilter(''); // Load all logs initially
+            startPolling(); // Start auto-refresh
         });
 
         function formatTs(ts) {
@@ -331,6 +332,22 @@
         const filterError = document.getElementById('filter-error');
         let debounceTimer;
         let activeFilter = '';
+        let pollingInterval;
+
+        // Start polling for updates every 2 seconds
+        function startPolling() {
+            if (pollingInterval) return;
+            pollingInterval = setInterval(() => {
+                applyFilter(activeFilter);
+            }, 2000);
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
 
         async function applyFilter(filterQuery) {
             filterQuery = filterQuery.trim();
@@ -369,11 +386,15 @@
             }
         }
 
+        // Pause polling when user is typing in the search box
+        search.addEventListener('focus', () => stopPolling());
+        search.addEventListener('blur', () => startPolling());
+
         search.addEventListener('input', (e) => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 applyFilter(e.target.value);
-            }, 300); // Debounce 300ms
+            }, 300);
         });
 
         // Helper to create request item element
@@ -388,8 +409,6 @@
             const method = log.Request?.method || 'OTHER';
             const path = log.Request?.path || '/';
             const status = log.Response?.status_code || 0;
-            const reqContentType = log.Request?.headers?.['Content-Type'] || log.Request?.headers?.['content-type'] || '';
-            const resContentType = log.Response?.headers?.['Content-Type'] || log.Response?.headers?.['content-type'] || '';
 
             li.innerHTML = `
                 <div class="summary">
@@ -403,26 +422,6 @@
                         <div class="item-time" style="color:#4b5563; font-family:monospace; font-size:12px; min-width:140px;">&nbsp;</div>
                     </div>
                     <div class="duration" style="font-family:monospace; color:#374151; font-size:12px;">&nbsp;</div>
-                </div>
-                <div class="details-template" style="display:none">
-                    <div class="section">
-                        <h2>Request</h2>
-                        <p><strong>Method:</strong> ${log.Request?.method || ''} &nbsp; <strong>Path:</strong> <code>${escapeHtml(log.Request?.path || '')}</code></p>
-                        <p><strong>Time:</strong> <span class="req-ts-hr" data-ts="${log.Request?.timestamp || ''}">&nbsp;</span></p>
-                        <h3>Headers</h3>
-                        ${log.Request?.headers ? Object.entries(log.Request.headers).map(([k, v]) => `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>`).join('') : '<p style="color:var(--muted)">(no request headers)</p>'}
-                        <h3>Body</h3>
-                        ${renderBody(log.Request?.body, reqContentType)}
-                    </div>
-                    <div class="section">
-                        <h2>Response</h2>
-                        <p><strong>Status:</strong> ${status === 0 ? 'Pending' : status}</p>
-                        <p><strong>Time:</strong> <span class="res-ts-hr" data-ts="${log.Response?.timestamp || ''}">&nbsp;</span> &nbsp; <strong>Duration:</strong> <span class="duration-hr">&nbsp;</span></p>
-                        <h3>Headers</h3>
-                        ${log.Response?.headers ? Object.entries(log.Response.headers).map(([k, v]) => `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>`).join('') : '<p style="color:var(--muted)">(no response headers)</p>'}
-                        <h3>Body</h3>
-                        ${renderBody(log.Response?.body, resContentType)}
-                    </div>
                 </div>
             `;
 
@@ -510,30 +509,72 @@
 
             // Attach click handlers
             items.forEach(item => {
-                item.addEventListener('click', () => {
+                item.addEventListener('click', async () => {
                     document.querySelectorAll('.request-item.selected').forEach(i => i.classList.remove('selected'));
                     item.classList.add('selected');
 
-                    const tmpl = item.querySelector('.details-template');
-                    detailsEl.innerHTML = tmpl.innerHTML;
+                    const requestID = item.getAttribute('data-requestid');
+
+                    // Show loading state
+                    detailsEl.innerHTML = '<p style="color:#6b7280; padding:20px;">Loading details...</p>';
                     placeholder.style.display = 'none';
 
-                    populateDetailsTimestamps(detailsEl);
+                    try {
+                        // Fetch full log details
+                        const response = await fetch('/api/logs/' + requestID);
+                        const data = await response.json();
+                        console.log({ requestID, data })
 
-                    // make <pre> copyable on click
-                    detailsEl.querySelectorAll('pre').forEach(pre => {
-                        pre.title = 'Click to copy';
-                        pre.style.cursor = 'pointer';
-                        pre.addEventListener('click', async () => {
-                            try {
-                                await navigator.clipboard.writeText(pre.innerText);
-                                pre.style.outline = '2px solid #cfe0ff';
-                                setTimeout(() => pre.style.outline = 'none', 300);
-                            } catch (e) { /* ignore */ }
+                        if (data.error || !data.log) {
+                            detailsEl.innerHTML = '<p style="color:#ef4444;">Error loading log details</p>';
+                            return;
+                        }
+
+                        const log = data.log;
+                        const reqContentType = log.Request?.headers?.['Content-Type'] || log.Request?.headers?.['content-type'] || '';
+                        const resContentType = log.Response?.headers?.['Content-Type'] || log.Response?.headers?.['content-type'] || '';
+
+                        // Render details
+                        detailsEl.innerHTML = `
+                            <div class="section">
+                                <h2>Request</h2>
+                                <p><strong>Method:</strong> ${log.Request?.method || ''} &nbsp; <strong>Path:</strong> <code>${escapeHtml(log.Request?.path || '')}</code></p>
+                                <p><strong>Time:</strong> <span class="req-ts-hr" data-ts="${log.Request?.timestamp || ''}">&nbsp;</span></p>
+                                <h3>Headers</h3>
+                                ${log.Request?.headers ? Object.entries(log.Request.headers).map(([k, v]) => `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>`).join('') : '<p style="color:var(--muted)">(no request headers)</p>'}
+                                <h3>Body</h3>
+                                ${renderBody(log.Request?.body, reqContentType)}
+                            </div>
+                            <div class="section">
+                                <h2>Response</h2>
+                                <p><strong>Status:</strong> ${log.Response?.status_code || 0}</p>
+                                <p><strong>Time:</strong> <span class="res-ts-hr" data-ts="${log.Response?.timestamp || ''}">&nbsp;</span> &nbsp; <strong>Duration:</strong> <span class="duration-hr">&nbsp;</span></p>
+                                <h3>Headers</h3>
+                                ${log.Response?.headers ? Object.entries(log.Response.headers).map(([k, v]) => `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>`).join('') : '<p style="color:var(--muted)">(no response headers)</p>'}
+                                <h3>Body</h3>
+                                ${renderBody(log.Response?.body, resContentType)}
+                            </div>
+                        `;
+
+                        populateDetailsTimestamps(detailsEl);
+
+                        // make <pre> copyable on click
+                        detailsEl.querySelectorAll('pre').forEach(pre => {
+                            pre.title = 'Click to copy';
+                            pre.style.cursor = 'pointer';
+                            pre.addEventListener('click', async () => {
+                                try {
+                                    await navigator.clipboard.writeText(pre.innerText);
+                                    pre.style.outline = '2px solid #cfe0ff';
+                                    setTimeout(() => pre.style.outline = 'none', 300);
+                                } catch (e) { /* ignore */ }
+                            });
                         });
-                    });
 
-                    detailsEl.scrollIntoView({ behavior: 'smooth' });
+                        detailsEl.scrollIntoView({ behavior: 'smooth' });
+                    } catch (err) {
+                        detailsEl.innerHTML = '<p style="color:#ef4444;">Error fetching log details</p>';
+                    }
                 });
 
                 // Apply method class normalization
