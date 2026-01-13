@@ -15,7 +15,7 @@ type model struct {
 	table       table.Model
 	width       int
 	height      int
-	getLogs     func() []*client.Log
+	logger      *client.Logger
 	appURL      string
 	filterMode  bool
 	filterQuery string
@@ -135,31 +135,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) updateTableRows() {
-	if m.getLogs == nil {
+	if m.logger == nil {
 		return
 	}
 
-	logs := m.getLogs()
+	var logs []*client.Log
 	if len(m.filters) == 0 {
-		m.table.SetRows(logsToRows(logs))
-		return
+		logs = m.logger.GetLogs()
+	} else {
+		filterQuery := client.FormatQuery(m.filters)
+		var err error
+		logs, err = m.logger.GetFilteredLogs(filterQuery)
+		if err != nil {
+			logs = []*client.Log{}
+		}
 	}
 
-	// Apply all filters
-	filteredLogs := []*client.Log{}
-	for _, log := range logs {
-		match := true
-		for _, filter := range m.filters {
-			if !client.MatchesFilter(log, filter) {
-				match = false
-				break
-			}
-		}
-		if match {
-			filteredLogs = append(filteredLogs, log)
-		}
-	}
-	m.table.SetRows(logsToRows(filteredLogs))
+	m.table.SetRows(logsToRows(logs))
 }
 
 func (m model) View() string {
@@ -286,13 +278,13 @@ func formatSize(bytes int) string {
 	return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
 }
 
-func NewModel(getLogs func() []*client.Log, appURL string) model {
+func NewModel(logger *client.Logger, appURL string) model {
 	columns := getColumns(80)
 
 	var rows []table.Row
 
-	if getLogs != nil {
-		rows = logsToRows(getLogs())
+	if logger != nil {
+		rows = logsToRows(logger.GetLogs())
 	}
 
 	t := table.New(
@@ -317,8 +309,8 @@ func NewModel(getLogs func() []*client.Log, appURL string) model {
 	t.SetStyles(s)
 
 	return model{
-		table:   t,
-		getLogs: getLogs,
-		appURL:  appURL,
+		table:  t,
+		logger: logger,
+		appURL: appURL,
 	}
 }
