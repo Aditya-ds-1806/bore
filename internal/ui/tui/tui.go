@@ -353,8 +353,20 @@ func (m *model) renderLogDetails() string {
 			}
 		}
 
+		var result strings.Builder
+		result.WriteString("\n")
+		result.WriteString(subHeaderStyle.Render(title))
+		result.WriteString("\n")
+
 		if !isWhitelisted {
-			return ""
+			notRenderableStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("240")).
+				Italic(true).
+				Padding(1)
+			result.WriteString(notRenderableStyle.Render("Body cannot be rendered (binary or unsupported content type)"))
+			result.WriteString("\n")
+
+			return result.String()
 		}
 
 		// Pretty print JSON if applicable
@@ -368,10 +380,6 @@ func (m *model) renderLogDetails() string {
 			}
 		}
 
-		var result strings.Builder
-		result.WriteString("\n")
-		result.WriteString(subHeaderStyle.Render(title))
-		result.WriteString("\n")
 		bodyStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("255")).
 			Background(lipgloss.Color("235")).
