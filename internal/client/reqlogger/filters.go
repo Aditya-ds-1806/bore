@@ -1,4 +1,4 @@
-package client
+package reqlogger
 
 import (
 	"fmt"
@@ -137,23 +137,6 @@ func MatchesFilter(log *Log, filter *Filter) bool {
 	}
 
 	return false
-}
-
-func FormatQuery(filters []*Filter) string {
-	if len(filters) == 0 {
-		return ""
-	}
-
-	parts := []string{}
-	for _, filter := range filters {
-		if filter.Op == "=" {
-			parts = append(parts, fmt.Sprintf("%s:%s", filter.Field, filter.Value))
-		} else {
-			parts = append(parts, fmt.Sprintf("%s:%s%s", filter.Field, filter.Op, filter.Value))
-		}
-	}
-
-	return strings.Join(parts, " ")
 }
 
 func compareString(actual, op, expected string) bool {

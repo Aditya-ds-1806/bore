@@ -1,4 +1,4 @@
-package client
+package reqlogger
 
 import (
 	borepb "bore/borepb"

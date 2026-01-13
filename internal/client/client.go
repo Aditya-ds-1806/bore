@@ -2,6 +2,7 @@ package client
 
 import (
 	borepb "bore/borepb"
+	"bore/internal/client/reqlogger"
 	"context"
 	"fmt"
 	"net/http"
@@ -18,14 +19,14 @@ var WSScheme string
 
 type BoreClientConfig struct {
 	UpstreamURL string
-	Logger      *Logger
+	Logger      *reqlogger.Logger
 }
 
 type BoreClient struct {
 	resty       *resty.Client
 	wsConn      *websocket.Conn
 	wsMutex     *sync.Mutex
-	Logger      *Logger
+	Logger      *reqlogger.Logger
 	AppId       string
 	AppURL      string
 	UpstreamURL string
@@ -71,7 +72,7 @@ func (bc *BoreClient) HandleWSMessages() error {
 
 		cookies, _ := http.ParseCookie(request.Cookies)
 
-		ctx := context.WithValue(context.TODO(), RequestIDKey, request.Id)
+		ctx := context.WithValue(context.TODO(), reqlogger.RequestIDKey, request.Id)
 
 		req := bc.resty.
 			NewRequest().
