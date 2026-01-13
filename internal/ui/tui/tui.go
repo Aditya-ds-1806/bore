@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bore/internal/client/reqlogger"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -356,6 +357,17 @@ func (m *model) renderLogDetails() string {
 			return ""
 		}
 
+		// Pretty print JSON if applicable
+		bodyText := string(body)
+		if strings.Contains(contentType, "json") {
+			var jsonData any
+			if err := json.Unmarshal(body, &jsonData); err == nil {
+				if prettyJSON, err := json.MarshalIndent(jsonData, "", "  "); err == nil {
+					bodyText = string(prettyJSON)
+				}
+			}
+		}
+
 		var result strings.Builder
 		result.WriteString("\n")
 		result.WriteString(subHeaderStyle.Render(title))
@@ -366,7 +378,7 @@ func (m *model) renderLogDetails() string {
 			Padding(1).
 			Width(m.width - 8)
 
-		result.WriteString(bodyStyle.Render(string(body)))
+		result.WriteString(bodyStyle.Render(bodyText))
 		result.WriteString("\n")
 
 		return result.String()
