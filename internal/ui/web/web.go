@@ -2,8 +2,7 @@ package web
 
 import (
 	"bore/internal/client"
-	"bytes"
-	"html/template"
+	"encoding/json"
 	"net/http"
 	"path/filepath"
 )
@@ -15,27 +14,30 @@ type WebServer struct {
 func (ws *WebServer) StartServer() error {
 	templatesDir := "internal/ui/web/templates"
 
+	http.HandleFunc("/api/logs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		filterQuery := r.URL.Query().Get("filter")
+
+		logs, err := ws.Logger.GetFilteredLogs(filterQuery)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]any{
+				"error": err.Error(),
+				"logs":  nil,
+			})
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]any{
+			"error": nil,
+			"logs":  logs,
+		})
+	})
+
+	// Main page endpoint
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		templatePath := filepath.Join(templatesDir, "index.html")
-		tmpl, err := template.ParseFiles(templatePath)
-		if err != nil {
-			// fmt.Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		var buf bytes.Buffer
-		err = tmpl.Execute(&buf, ws.Logger.GetLogs())
-		if err != nil {
-			// fmt.Println(err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if _, err = buf.WriteTo(w); err != nil {
-			// fmt.Println(err)
-			return
-		}
+		http.ServeFile(w, r, templatePath)
 	})
 
 	return http.ListenAndServe(":8000", nil)

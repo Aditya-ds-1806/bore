@@ -143,6 +143,10 @@
             background: #6b7280;
         }
 
+        input#search {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+        }
+
         .path {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
             color: #0b1220;
@@ -269,95 +273,14 @@
 
     <div class="container">
         <aside class="sidebar">
-            <input id="search" placeholder="Filter by path, method or status" />
+            <input id="search" placeholder="Ex: method:POST status:>=400 time:>1000ms" />
+            <div id="filter-help"
+                style="font-size:12px; color:#6b7280; padding:4px 0; display:flex; justify-content:space-between; align-items:center;">
+                <span id="filter-error" style="color:#ef4444; display:none;"></span>
+            </div>
 
             <ul class="requests" id="requests">
-                {{range $idx, $log := .}}
-                <li class="request-item" data-index="{{$idx}}" data-requestid="{{.RequestID}}"
-                    data-req-ts="{{.Request.Timestamp}}" data-res-ts="{{.Response.Timestamp}}">
-                    <div class="summary">
-                        {{ $method := .Request.Method }}
-                        <div class="method {{if $method}}{{ $method }}{{else}}OTHER{{end}}">{{if $method}}{{ $method
-                            }}{{else}}OTHER{{end}}</div>
-                        <div class="path">{{.Request.Path}}</div>
-                        <div class="status" data-status="{{.Response.StatusCode}}">{{if eq .Response.StatusCode
-                            0}}Pending{{else}}{{.Response.StatusCode}}{{end}}</div>
-                    </div>
-
-                    <div class="meta">
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <div>{{.RequestID}}</div>
-                            <div class="item-time"
-                                style="color:#4b5563; font-family:monospace; font-size:12px; min-width:140px;">&nbsp;
-                            </div>
-                        </div>
-                        <div class="duration" style="font-family:monospace; color:#374151; font-size:12px;">&nbsp;</div>
-                    </div>
-
-                    <div class="details-template" style="display:none">
-                        <div class="section">
-                            <h2>Request</h2>
-                            <p><strong>Method:</strong> {{.Request.Method}} &nbsp; <strong>Path:</strong>
-                                <code>{{.Request.Path}}</code>
-                            </p>
-                            <p><strong>Time:</strong> <span class="req-ts-hr"
-                                    data-ts="{{.Request.Timestamp}}">&nbsp;</span></p>
-
-                            <h3>Headers</h3>
-                            {{ if .Request.Headers }}
-                            <div>
-                                {{ range $k, $vs := .Request.Headers }}
-                                <div class="kv">
-                                    <div class="k">{{$k}}</div>
-                                    <div class="v">{{$vs}}</div>
-                                </div>
-                                {{ end }}
-                            </div>
-                            {{ else }}
-                            <p style="color:var(--muted)">(no request headers)</p>
-                            {{ end }}
-
-                            <h3>Body</h3>
-                            {{ if .Request.Body }}
-                            <pre>{{printf "%s" .Request.Body}}</pre>
-                            {{ else }}
-                            <p style="color:var(--muted)">(no request body)</p>
-                            {{ end }}
-                        </div>
-
-                        <div class="section">
-                            <h2>Response</h2>
-                            <p><strong>Status:</strong> {{if eq .Response.StatusCode
-                                0}}Pending{{else}}{{.Response.StatusCode}}{{end}}</p>
-                            <p><strong>Time:</strong> <span class="res-ts-hr"
-                                    data-ts="{{.Response.Timestamp}}">&nbsp;</span> &nbsp; <strong>Duration:</strong>
-                                <span class="duration-hr">&nbsp;</span>
-                            </p>
-
-                            <h3>Headers</h3>
-                            {{ if .Response.Headers }}
-                            <div>
-                                {{ range $k, $vs := .Response.Headers }}
-                                <div class="kv">
-                                    <div class="k">{{$k}}</div>
-                                    <div class="v">{{$vs}}</div>
-                                </div>
-                                {{ end }}
-                            </div>
-                            {{ else }}
-                            <p style="color:var(--muted)">(no response headers)</p>
-                            {{ end }}
-
-                            <h3>Body</h3>
-                            {{ if .Response.Body }}
-                            <pre>{{printf "%s" .Response.Body}}</pre>
-                            {{ else }}
-                            <p style="color:var(--muted)">(no response body)</p>
-                            {{ end }}
-                        </div>
-                    </div>
-                </li>
-                {{end}}
+                <li style="padding:20px; text-align:center; color:#6b7280;">Loading...</li>
             </ul>
         </aside>
 
@@ -371,9 +294,13 @@
     <script>
         // Small client-side behavior: click items to show details, filter list
         const requestsRoot = document.getElementById('requests');
-        const items = Array.from(document.querySelectorAll('.request-item'));
         const detailsEl = document.getElementById('details');
         const placeholder = document.getElementById('placeholder');
+
+        // Load initial data on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            applyFilter(''); // Load all logs initially
+        });
 
         function formatTs(ts) {
             if (!ts) return '—';
@@ -388,20 +315,6 @@
             return d + ' ms';
         }
 
-        function populateItemTimes() {
-            items.forEach(it => {
-                const reqTs = it.getAttribute('data-req-ts');
-                const resTs = it.getAttribute('data-res-ts');
-                const timeEl = it.querySelector('.item-time');
-                const durationEl = it.querySelector('.duration');
-                if (timeEl) timeEl.innerText = formatTs(reqTs);
-                if (durationEl) {
-                    const d = formatDuration(reqTs, resTs);
-                    durationEl.innerText = (d === '—' ? (resTs && resTs != '0' ? '—' : 'Pending') : d);
-                }
-            });
-        }
-
         function populateDetailsTimestamps(root) {
             const reqEl = root.querySelector('.req-ts-hr');
             const resEl = root.querySelector('.res-ts-hr');
@@ -413,60 +326,176 @@
             if (durEl) durEl.innerText = formatDuration(reqTs, resTs);
         }
 
-        items.forEach(item => item.addEventListener('click', () => {
-            document.querySelectorAll('.request-item.selected').forEach(i => i.classList.remove('selected'));
-            item.classList.add('selected');
-
-            const tmpl = item.querySelector('.details-template');
-            detailsEl.innerHTML = tmpl.innerHTML;
-            placeholder.style.display = 'none';
-
-            populateDetailsTimestamps(detailsEl);
-
-            // make <pre> copyable on click
-            detailsEl.querySelectorAll('pre').forEach(pre => {
-                pre.title = 'Click to copy';
-                pre.style.cursor = 'pointer';
-                pre.addEventListener('click', async () => {
-                    try {
-                        await navigator.clipboard.writeText(pre.innerText);
-                        pre.style.outline = '2px solid #cfe0ff';
-                        setTimeout(() => pre.style.outline = 'none', 300);
-                    } catch (e) { /* ignore */ }
-                });
-            });
-
-            // scroll details into view
-            detailsEl.scrollIntoView({ behavior: 'smooth' });
-        }));
-
-        // initial populate
-        populateItemTimes();
-
-        // Filter input
+        // Filter input with API calls
         const search = document.getElementById('search');
+        const filterError = document.getElementById('filter-error');
+        let debounceTimer;
+        let activeFilter = '';
+
+        async function applyFilter(filterQuery) {
+            filterQuery = filterQuery.trim();
+            activeFilter = filterQuery;
+
+            filterError.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/logs?filter=' + encodeURIComponent(filterQuery));
+                const data = await response.json();
+
+                if (data.error) {
+                    // Show error
+                    filterError.textContent = 'Error: ' + data.error;
+                    filterError.style.display = 'block';
+                    return;
+                }
+
+                // Update the list with filtered logs
+                const requestsList = document.getElementById('requests');
+                requestsList.innerHTML = '';
+
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.forEach((log, idx) => {
+                        const li = createRequestItem(log, idx);
+                        requestsList.appendChild(li);
+                    });
+                    // Re-populate times and re-attach event listeners
+                    updateItemsList();
+                } else {
+                    requestsList.innerHTML = '<li style="padding:20px; text-align:center; color:#6b7280;">No matching requests</li>';
+                }
+            } catch (err) {
+                filterError.textContent = 'Error: Failed to fetch logs';
+                filterError.style.display = 'block';
+            }
+        }
+
         search.addEventListener('input', (e) => {
-            const q = e.target.value.toLowerCase().trim();
-            items.forEach(it => {
-                const path = it.querySelector('.path').innerText.toLowerCase();
-                const method = it.querySelector('.method').innerText.toLowerCase();
-                const status = it.querySelector('.status').innerText.toLowerCase();
-                const rid = it.getAttribute('data-requestid').toLowerCase();
-                const previewEl = it.querySelector('.item-preview');
-                const preview = previewEl ? previewEl.innerText.toLowerCase() : '';
-                const show = !q || path.includes(q) || method.includes(q) || status.includes(q) || rid.includes(q) || preview.includes(q);
-                it.style.display = show ? '' : 'none';
-            });
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                applyFilter(e.target.value);
+            }, 300); // Debounce 300ms
         });
 
-        // Apply method class normalization for any unknown methods
-        items.forEach(it => {
-            const mEl = it.querySelector('.method');
-            const method = mEl.innerText.trim();
-            if (!['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-                mEl.classList.add('OTHER');
-            }
-        });
+        // Helper to create request item element
+        function createRequestItem(log, idx) {
+            const li = document.createElement('li');
+            li.className = 'request-item';
+            li.setAttribute('data-index', idx);
+            li.setAttribute('data-requestid', log.RequestID || '');
+            li.setAttribute('data-req-ts', log.Request?.timestamp || '');
+            li.setAttribute('data-res-ts', log.Response?.timestamp || '');
+
+            const method = log.Request?.method || 'OTHER';
+            const path = log.Request?.path || '/';
+            const status = log.Response?.status_code || 0;
+
+            li.innerHTML = `
+                <div class="summary">
+                    <div class="method ${method}">${method}</div>
+                    <div class="path">${escapeHtml(path)}</div>
+                    <div class="status" data-status="${status}">${status === 0 ? 'Pending' : status}</div>
+                </div>
+                <div class="meta">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <div>${log.RequestID || ''}</div>
+                        <div class="item-time" style="color:#4b5563; font-family:monospace; font-size:12px; min-width:140px;">&nbsp;</div>
+                    </div>
+                    <div class="duration" style="font-family:monospace; color:#374151; font-size:12px;">&nbsp;</div>
+                </div>
+                <div class="details-template" style="display:none">
+                    <div class="section">
+                        <h2>Request</h2>
+                        <p><strong>Method:</strong> ${log.Request?.method || ''} &nbsp; <strong>Path:</strong> <code>${escapeHtml(log.Request?.path || '')}</code></p>
+                        <p><strong>Time:</strong> <span class="req-ts-hr" data-ts="${log.Request?.timestamp || ''}">&nbsp;</span></p>
+                        <h3>Headers</h3>
+                        ${log.Request?.headers ? Object.entries(log.Request.headers).map(([k, v]) => `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>`).join('') : '<p style="color:var(--muted)">(no request headers)</p>'}
+                        <h3>Body</h3>
+                        ${log.Request?.body ? `<pre>${escapeHtml(atob(log.Request.body))}</pre>` : '<p style="color:var(--muted)">(no request body)</p>'}
+                    </div>
+                    <div class="section">
+                        <h2>Response</h2>
+                        <p><strong>Status:</strong> ${status === 0 ? 'Pending' : status}</p>
+                        <p><strong>Time:</strong> <span class="res-ts-hr" data-ts="${log.Response?.timestamp || ''}">&nbsp;</span> &nbsp; <strong>Duration:</strong> <span class="duration-hr">&nbsp;</span></p>
+                        <h3>Headers</h3>
+                        ${log.Response?.headers ? Object.entries(log.Response.headers).map(([k, v]) => `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>`).join('') : '<p style="color:var(--muted)">(no response headers)</p>'}
+                        <h3>Body</h3>
+                        ${log.Response?.body ? `<pre>${escapeHtml(atob(log.Response.body))}</pre>` : '<p style="color:var(--muted)">(no response body)</p>'}
+                    </div>
+                </div>
+            `;
+
+            return li;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateItemsList() {
+            const items = Array.from(document.querySelectorAll('.request-item'));
+
+            // Populate times
+            items.forEach(it => {
+                const reqTs = it.getAttribute('data-req-ts');
+                const resTs = it.getAttribute('data-res-ts');
+                const timeEl = it.querySelector('.item-time');
+                const durationEl = it.querySelector('.duration');
+                if (timeEl) timeEl.innerText = formatTs(reqTs);
+                if (durationEl) {
+                    const d = formatDuration(reqTs, resTs);
+                    durationEl.innerText = (d === '—' ? (resTs && resTs != '0' ? '—' : 'Pending') : d);
+                }
+            });
+
+            // Attach click handlers
+            items.forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.request-item.selected').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+
+                    const tmpl = item.querySelector('.details-template');
+                    detailsEl.innerHTML = tmpl.innerHTML;
+                    placeholder.style.display = 'none';
+
+                    populateDetailsTimestamps(detailsEl);
+
+                    // make <pre> copyable on click
+                    detailsEl.querySelectorAll('pre').forEach(pre => {
+                        pre.title = 'Click to copy';
+                        pre.style.cursor = 'pointer';
+                        pre.addEventListener('click', async () => {
+                            try {
+                                await navigator.clipboard.writeText(pre.innerText);
+                                pre.style.outline = '2px solid #cfe0ff';
+                                setTimeout(() => pre.style.outline = 'none', 300);
+                            } catch (e) { /* ignore */ }
+                        });
+                    });
+
+                    detailsEl.scrollIntoView({ behavior: 'smooth' });
+                });
+
+                // Apply method class normalization
+                const mEl = item.querySelector('.method');
+                if (mEl) {
+                    const method = mEl.innerText.trim();
+                    if (!['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+                        mEl.classList.add('OTHER');
+                    }
+                }
+            });
+
+            // Apply method class normalization for any unknown methods
+            items.forEach(it => {
+                const mEl = it.querySelector('.method');
+                const method = mEl.innerText.trim();
+                if (!['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+                    mEl.classList.add('OTHER');
+                }
+            });
+        }
     </script>
 </body>
 
