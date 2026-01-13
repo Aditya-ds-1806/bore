@@ -458,7 +458,12 @@
                 // Handle images
                 if (contentType.includes('image/')) {
                     const mimeType = contentType.split(';')[0].trim();
-                    return `<img src="data:${mimeType};base64,${body}" style="max-width:100%; height:auto; border-radius:6px; border:1px solid #e6edf3;" />`;
+                    // Validate MIME type to prevent XSS
+                    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp'];
+                    if (!validImageTypes.includes(mimeType.toLowerCase())) {
+                        return `<p style="color:var(--muted);">Unsupported image type: ${escapeHtml(mimeType)}</p>`;
+                    }
+                    return `<img src="data:${escapeHtml(mimeType)};base64,${body}" style="max-width:100%; height:auto; border-radius:6px; border:1px solid #e6edf3;" />`;
                 }
 
                 // Handle PDF
@@ -479,10 +484,10 @@
                 const size = new Blob([decoded]).size;
                 return `<div style="padding:16px; background:#f7fafc; border-radius:6px; color:#6b7280;">
                     <p style="margin:0;">Binary content (${formatBytes(size)})</p>
-                    <p style="margin:8px 0 0 0; font-size:12px;">Content-Type: ${contentType || 'unknown'}</p>
+                    <p style="margin:8px 0 0 0; font-size:12px;">Content-Type: ${escapeHtml(contentType || 'unknown')}</p>
                 </div>`;
             } catch (e) {
-                return `<p style="color:#ef4444;">Error rendering body: ${e.message}</p>`;
+                return `<p style="color:#ef4444;">Error rendering body. Unable to display content.</p>`;
             }
         }
 
