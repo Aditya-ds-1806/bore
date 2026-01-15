@@ -4,3 +4,4 @@ bore-server
 *.pem
 logs
 nginx.local.conf
+dist

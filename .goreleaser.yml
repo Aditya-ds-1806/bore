@@ -29,8 +29,16 @@ builds:
     targets:
       - go_first_class
   
-binary_signs:
-  - {}
+signs:
+  - cmd: cosign
+    certificate: "${artifact}.pem"
+    artifacts: all
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes"
 
 report_sizes: true
 
