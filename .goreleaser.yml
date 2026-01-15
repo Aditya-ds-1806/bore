@@ -9,35 +9,28 @@ before:
 builds:
   - 
     id: bore-server
-
     binary: bore-server
-
     main: ./cmd/main.go
-
     env:
       - CGO_ENABLED=0
-
     ldflags:
       - "-s -w -X 'main.AppMode=server'"
-
     targets:
       - go_first_class
 
   - 
     id: bore-client
-
     binary: bore
-
     main: ./cmd/main.go
-
     env:
       - CGO_ENABLED=0
-
     ldflags:
       - "-s -w -X 'main.AppMode=client' -X 'bore/internal/client.BoreServerHost=trybore.com' -X 'bore/internal/client.WSScheme=wss'"
-
     targets:
       - go_first_class
+  
+binary_signs:
+  - {}
 
 report_sizes: true
 
