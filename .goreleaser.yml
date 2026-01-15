@@ -20,7 +20,8 @@ builds:
     ldflags:
       - "-s -w -X 'main.AppMode=server'"
 
-    targets: go_first_class
+    targets:
+      - go_first_class
 
   - 
     id: bore-client
@@ -35,7 +36,8 @@ builds:
     ldflags:
       - "-s -w -X 'main.AppMode=client' -X 'bore/internal/client.BoreServerHost=trybore.com' -X 'bore/internal/client.WSScheme=wss'"
 
-    targets: go_first_class
+    targets:
+      - go_first_class
 
 report_sizes: true
 
