@@ -170,9 +170,11 @@ func (m *model) updateTableRows() {
 		logs, err = m.logger.GetFilteredLogs(m.filterQuery)
 		if err != nil {
 			m.filterError = err.Error()
+			return
 		}
 	}
 
+	m.filterError = ""
 	m.table.SetRows(logsToRows(logs))
 }
 
