@@ -42,7 +42,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Handle filter input mode
 		if m.filterMode {
 			switch msg.String() {
 			case "esc":
@@ -107,7 +106,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		// Normal mode keys
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -195,7 +193,7 @@ func (m model) View() string {
 		Align(lipgloss.Center).
 		Render("Web Inspector URL: http://localhost:8000")
 
-	// If in detail mode, show detail view
+
 	if m.detailMode {
 		detailView := lipgloss.
 			NewStyle().
@@ -203,7 +201,12 @@ func (m model) View() string {
 			Height(m.height - 4).
 			Render(m.viewport.View())
 
-		helpLine := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Width(m.width).Align(lipgloss.Center).Render("↑/↓: scroll | esc/q: back to list")
+		helpLine := lipgloss.
+			NewStyle().
+			Foreground(lipgloss.Color("240")).
+			Width(m.width).
+			Align(lipgloss.Center).
+			Render("↑/↓: scroll | esc/q: back to list")
 
 		return urlLine + "\n" + webInspectorLine + "\n" + detailView + "\n" + helpLine
 	}
@@ -213,12 +216,10 @@ func (m model) View() string {
 	if m.filterMode {
 		exampleText := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("Ex: method:GET path:/api status:>=200 |")
 
-		// Insert cursor at current position
 		queryWithCursor := m.filterQuery[:m.cursorPos] + "_" + m.filterQuery[m.cursorPos:]
 		filterInput := lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Bold(true).Render(" Filter: " + queryWithCursor + " ")
 		helpText := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Render("| Enter:apply Esc:cancel")
 
-		// Calculate padding to center the input
 		totalLen := len("Ex: method:GET path:/api status:>=200 |") + len(" Filter: ") + len(queryWithCursor) + len(" ") + len("| Enter:apply Esc:cancel")
 		leftPadding := (m.width - totalLen) / 2
 		if leftPadding < 0 {
@@ -326,17 +327,14 @@ func (m *model) renderLogDetails() string {
 	log := m.selectedLog
 	var content strings.Builder
 
-	// Styles
 	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86")).MarginTop(1)
 	subHeaderStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("111")).MarginTop(1)
 
-	// Helper function to render body content
 	renderBody := func(title string, body []byte, contentType string) string {
 		if body == nil {
 			return ""
 		}
 
-		// Whitelisted MIME types for body rendering
 		whitelistedMimeTypes := []string{
 			"json",
 			"xml",
@@ -394,7 +392,6 @@ func (m *model) renderLogDetails() string {
 		return result.String()
 	}
 
-	// Helper function to render key-value pairs with proper wrapping
 	renderKV := func(key, value string, indent int) string {
 		keyWidth := 30
 		maxValueWidth := max(m.width-keyWidth-indent-10, 40) // Account for borders, padding, and scrollbar
