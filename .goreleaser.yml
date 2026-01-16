@@ -33,10 +33,9 @@ signs:
   -
     cmd: cosign
     artifacts: archive
-    signature: "${artifact}.sig"
-    certificate: "${artifact}.pem"
+    signature: "${artifact}.bundle"
     args:
-      - "sign-blob"
+      - sign-blob
       - "--yes"
       - "--bundle=${signature}"
       - "${artifact}"
