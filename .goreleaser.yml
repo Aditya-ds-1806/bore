@@ -1,0 +1,48 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - 
+    id: bore-server
+    binary: bore-server
+    main: ./cmd/main.go
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - "-s -w -X 'main.AppMode=server'"
+    targets:
+      - go_first_class
+
+  - 
+    id: bore-client
+    binary: bore
+    main: ./cmd/main.go
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - "-s -w -X 'main.AppMode=client' -X 'bore/internal/client.BoreServerHost=trybore.com' -X 'bore/internal/client.WSScheme=wss'"
+    targets:
+      - go_first_class
+  
+signs:
+  -
+    cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.bundle"
+    args:
+      - sign-blob
+      - "--yes"
+      - "--bundle=${signature}"
+      - "${artifact}"
+
+report_sizes: true
+
+release:
+  footer: >-
+
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
