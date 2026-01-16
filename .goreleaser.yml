@@ -30,12 +30,13 @@ builds:
       - go_first_class
   
 signs:
+  -
     cmd: cosign
-    artifacts: archives
+    artifacts: archive
     signature: "${artifact}.sig"
     certificate: "${artifact}.pem"
     args:
-      - sign-blob
+      - "sign-blob"
       - "--yes"
       - "--oidc-issuer=https://token.actions.githubusercontent.com"
       - "--output-signature=${signature}"
