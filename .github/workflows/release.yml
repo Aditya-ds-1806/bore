@@ -1,6 +1,10 @@
 name: release
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
@@ -23,7 +27,7 @@ jobs:
       - name: Cosign setup
         uses: sigstore/cosign-installer@v4.0.0
         with:
-          cosign-release: 'v3.0.3' # optional
+          cosign-release: 'v3.0.3'
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
