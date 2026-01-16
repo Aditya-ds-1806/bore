@@ -2,11 +2,14 @@ package tui
 
 import (
 	"bore/internal/client/reqlogger"
+	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -21,6 +24,9 @@ type model struct {
 	filterQuery string
 	cursorPos   int
 	filterError string
+	detailMode  bool
+	selectedLog *reqlogger.Log
+	viewport    viewport.Model
 }
 
 type tickMsg struct{}
@@ -36,7 +42,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Handle filter input mode
 		if m.filterMode {
 			switch msg.String() {
 			case "esc":
@@ -87,7 +92,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Normal mode keys
+		if m.detailMode {
+			switch msg.String() {
+			case "esc", "q":
+				m.detailMode = false
+				m.selectedLog = nil
+				return m, nil
+			case "ctrl+c":
+				return m, tea.Quit
+			}
+
+			m.viewport, cmd = m.viewport.Update(msg)
+			return m, cmd
+		}
+
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -102,6 +120,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.filterError = ""
 			m.updateTableRows()
 			return m, nil
+		case "enter":
+			selectedRow := m.table.SelectedRow()
+			if selectedRow != nil {
+				requestID := selectedRow[0]
+				m.selectedLog = m.logger.GetLogByID(requestID)
+				if m.selectedLog != nil {
+					m.detailMode = true
+					m.viewport.SetContent(m.renderLogDetails())
+					m.viewport.GotoTop()
+				}
+			}
+			return m, nil
 		}
 
 	case tea.WindowSizeMsg:
@@ -110,6 +140,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.table.SetWidth(msg.Width)
 		m.table.SetHeight(msg.Height - 4)
 		m.table.SetColumns(getColumns(msg.Width))
+		m.viewport.Width = msg.Width
+		m.viewport.Height = msg.Height - 4
 
 	case tickMsg:
 		m.updateTableRows()
@@ -136,9 +168,11 @@ func (m *model) updateTableRows() {
 		logs, err = m.logger.GetFilteredLogs(m.filterQuery)
 		if err != nil {
 			m.filterError = err.Error()
+			return
 		}
 	}
 
+	m.filterError = ""
 	m.table.SetRows(logsToRows(logs))
 }
 
@@ -159,17 +193,33 @@ func (m model) View() string {
 		Align(lipgloss.Center).
 		Render("Web Inspector URL: http://localhost:8000")
 
+
+	if m.detailMode {
+		detailView := lipgloss.
+			NewStyle().
+			Width(m.width).
+			Height(m.height - 4).
+			Render(m.viewport.View())
+
+		helpLine := lipgloss.
+			NewStyle().
+			Foreground(lipgloss.Color("240")).
+			Width(m.width).
+			Align(lipgloss.Center).
+			Render("↑/↓: scroll | esc/q: back to list")
+
+		return urlLine + "\n" + webInspectorLine + "\n" + detailView + "\n" + helpLine
+	}
+
 	// Filter input area - always single line to prevent jitter
 	var filterLine string
 	if m.filterMode {
 		exampleText := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("Ex: method:GET path:/api status:>=200 |")
 
-		// Insert cursor at current position
 		queryWithCursor := m.filterQuery[:m.cursorPos] + "_" + m.filterQuery[m.cursorPos:]
 		filterInput := lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Bold(true).Render(" Filter: " + queryWithCursor + " ")
 		helpText := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Render("| Enter:apply Esc:cancel")
 
-		// Calculate padding to center the input
 		totalLen := len("Ex: method:GET path:/api status:>=200 |") + len(" Filter: ") + len(queryWithCursor) + len(" ") + len("| Enter:apply Esc:cancel")
 		leftPadding := (m.width - totalLen) / 2
 		if leftPadding < 0 {
@@ -186,7 +236,7 @@ func (m model) View() string {
 		if m.filterQuery != "" {
 			helpText += " | Active: " + m.filterQuery
 		}
-		helpText += " | c:clear"
+		helpText += " | c:clear | enter:details"
 		filterLine = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Width(m.width).Align(lipgloss.Center).Render(helpText)
 	}
 
@@ -204,7 +254,8 @@ func getColumns(width int) []table.Column {
 		width = 80
 	}
 
-	width = width - 12 // leave room for borders/padding
+	width = width - 12  // leave room for borders/padding
+	requestIDWidth := 0 // Hidden column for RequestID
 	methodWidth := width * 8 / 100
 	statusWidth := width * 8 / 100
 	respTimeWidth := width * 18 / 100
@@ -213,6 +264,7 @@ func getColumns(width int) []table.Column {
 	uriWidth := width - methodWidth - statusWidth - respTimeWidth - contentTypeWidth - sizeWidth
 
 	return []table.Column{
+		{Title: "", Width: requestIDWidth}, // Hidden RequestID column
 		{Title: "Method", Width: methodWidth},
 		{Title: "URI", Width: uriWidth},
 		{Title: "Status", Width: statusWidth},
@@ -226,6 +278,7 @@ func logsToRows(logs []*reqlogger.Log) []table.Row {
 	var rows []table.Row
 
 	for _, log := range logs {
+		requestID := log.RequestID
 		method := ""
 		uri := ""
 		status := ""
@@ -251,7 +304,7 @@ func logsToRows(logs []*reqlogger.Log) []table.Row {
 		}
 
 		respTime = fmt.Sprintf("%d", log.Duration)
-		rows = append(rows, table.Row{method, uri, status, contentType, size, respTime})
+		rows = append(rows, table.Row{requestID, method, uri, status, contentType, size, respTime})
 	}
 
 	return rows
@@ -264,6 +317,227 @@ func formatSize(bytes int) string {
 		return fmt.Sprintf("%.1f KB", float64(bytes)/1024)
 	}
 	return fmt.Sprintf("%.1f MB", float64(bytes)/(1024*1024))
+}
+
+func (m *model) renderLogDetails() string {
+	if m.selectedLog == nil {
+		return "No log selected"
+	}
+
+	log := m.selectedLog
+	var content strings.Builder
+
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86")).MarginTop(1)
+	subHeaderStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("111")).MarginTop(1)
+
+	renderBody := func(title string, body []byte, contentType string) string {
+		if body == nil {
+			return ""
+		}
+
+		whitelistedMimeTypes := []string{
+			"json",
+			"xml",
+			"form-data",
+			"x-www-form-urlencoded",
+			"text/",
+			"javascript",
+		}
+
+		contentType = strings.ToLower(contentType)
+		isWhitelisted := false
+		for _, mimeType := range whitelistedMimeTypes {
+			if strings.Contains(contentType, mimeType) {
+				isWhitelisted = true
+				break
+			}
+		}
+
+		var result strings.Builder
+		result.WriteString("\n")
+		result.WriteString(subHeaderStyle.Render(title))
+		result.WriteString("\n")
+
+		if !isWhitelisted {
+			notRenderableStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("240")).
+				Italic(true).
+				Padding(1)
+			result.WriteString(notRenderableStyle.Render("Body cannot be rendered (binary or unsupported content type)"))
+			result.WriteString("\n")
+
+			return result.String()
+		}
+
+		// Pretty print JSON if applicable
+		bodyText := string(body)
+		if strings.Contains(contentType, "json") {
+			var jsonData any
+			if err := json.Unmarshal(body, &jsonData); err == nil {
+				if prettyJSON, err := json.MarshalIndent(jsonData, "", "  "); err == nil {
+					bodyText = string(prettyJSON)
+				}
+			}
+		}
+
+		bodyStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("255")).
+			Background(lipgloss.Color("235")).
+			Padding(1).
+			Width(m.width - 8)
+
+		result.WriteString(bodyStyle.Render(bodyText))
+		result.WriteString("\n")
+
+		return result.String()
+	}
+
+	renderKV := func(key, value string, indent int) string {
+		keyWidth := 30
+		maxValueWidth := max(m.width-keyWidth-indent-10, 40) // Account for borders, padding, and scrollbar
+
+		keyRendered := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(key + ":")
+		keyRendered = lipgloss.NewStyle().Width(keyWidth).Inline(true).Render(keyRendered)
+
+		// Wrap value with proper indentation
+		wrappedValue := lipgloss.NewStyle().
+			Width(maxValueWidth).
+			Foreground(lipgloss.Color("255")).
+			Render(value)
+
+		// Add left padding to continuation lines
+		lines := strings.Split(wrappedValue, "\n")
+		if len(lines) > 1 {
+			for i := 1; i < len(lines); i++ {
+				lines[i] = strings.Repeat(" ", indent+keyWidth+1) + lines[i]
+			}
+		}
+
+		result := strings.Repeat(" ", indent) + keyRendered + " " + lines[0]
+		if len(lines) > 1 {
+			result += "\n" + strings.Join(lines[1:], "\n")
+		}
+		return result + "\n"
+	}
+
+	// Request ID
+	content.WriteString(headerStyle.Render("━━━ Request Details ━━━"))
+	content.WriteString("\n\n")
+	content.WriteString(renderKV("Request ID", log.RequestID, 0))
+
+	if log.Request != nil {
+		req := log.Request
+
+		// Method and Path
+		content.WriteString(renderKV("Method", req.Method, 0))
+		content.WriteString(renderKV("Path", req.Path, 0))
+
+		// Timestamp
+		if req.Timestamp > 0 {
+			timestamp := time.UnixMilli(req.Timestamp).Format("2006-01-02 15:04:05.000")
+			content.WriteString(renderKV("Timestamp", timestamp, 0))
+		}
+
+		// Request Headers
+		if len(req.Headers) > 0 {
+			content.WriteString("\n")
+			content.WriteString(subHeaderStyle.Render("Request Headers:"))
+			content.WriteString("\n")
+
+			// Sort headers for consistent display
+			headerKeys := make([]string, 0, len(req.Headers))
+			for k := range req.Headers {
+				headerKeys = append(headerKeys, k)
+			}
+			sort.Strings(headerKeys)
+
+			for _, k := range headerKeys {
+				v := req.Headers[k]
+				content.WriteString(renderKV(k, v, 2))
+			}
+		}
+
+		// Request Body
+		if req.Body != nil {
+			contentType := ""
+			if ct, ok := req.Headers["Content-Type"]; ok {
+				contentType = ct
+			}
+			content.WriteString(renderBody("Request Body:", req.Body, contentType))
+		}
+	}
+
+	if log.Response != nil {
+		res := log.Response
+
+		content.WriteString("\n")
+		content.WriteString(headerStyle.Render("━━━ Response Details ━━━"))
+		content.WriteString("\n\n")
+
+		// Status Code
+		statusColor := "255"
+		if res.StatusCode >= 200 && res.StatusCode < 300 {
+			statusColor = "42"
+		} else if res.StatusCode >= 300 && res.StatusCode < 400 {
+			statusColor = "33"
+		} else if res.StatusCode >= 400 && res.StatusCode < 500 {
+			statusColor = "208"
+		} else if res.StatusCode >= 500 {
+			statusColor = "196"
+		}
+		statusValue := lipgloss.NewStyle().Foreground(lipgloss.Color(statusColor)).Bold(true).Render(fmt.Sprintf("%d", res.StatusCode))
+		content.WriteString(renderKV("Status Code", statusValue, 0))
+
+		// Response Timestamp
+		if res.Timestamp > 0 {
+			timestamp := time.UnixMilli(res.Timestamp).Format("2006-01-02 15:04:05.000")
+			content.WriteString(renderKV("Timestamp", timestamp, 0))
+		}
+
+		// Duration
+		if log.Duration > 0 {
+			durationStr := fmt.Sprintf("%d ms", log.Duration)
+			if log.Duration >= 1000 {
+				durationStr = fmt.Sprintf("%.2f s", float64(log.Duration)/1000)
+			}
+			content.WriteString(renderKV("Duration", durationStr, 0))
+		}
+
+		// Response Size
+		if res.Body != nil {
+			content.WriteString(renderKV("Body Size", formatSize(len(res.Body)), 0))
+		}
+
+		// Response Headers
+		if len(res.Headers) > 0 {
+			content.WriteString("\n")
+			content.WriteString(subHeaderStyle.Render("Response Headers:"))
+			content.WriteString("\n")
+
+			// Sort headers for consistent display
+			headerKeys := make([]string, 0, len(res.Headers))
+			for k := range res.Headers {
+				headerKeys = append(headerKeys, k)
+			}
+			sort.Strings(headerKeys)
+
+			for _, k := range headerKeys {
+				v := res.Headers[k]
+				content.WriteString(renderKV(k, v, 2))
+			}
+		}
+
+		// Response Body
+		if res.Body != nil {
+			contentType := ""
+			if ct, ok := res.Headers["Content-Type"]; ok {
+				contentType = ct
+			}
+			content.WriteString(renderBody("Response Body:", res.Body, contentType))
+		}
+	}
+
+	return content.String()
 }
 
 func NewModel(logger *reqlogger.Logger, appURL string) model {
@@ -296,9 +570,17 @@ func NewModel(logger *reqlogger.Logger, appURL string) model {
 
 	t.SetStyles(s)
 
+	vp := viewport.New(80, 20)
+	vp.Style = lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		PaddingLeft(2).
+		PaddingRight(2)
+
 	return model{
-		table:  t,
-		logger: logger,
-		appURL: appURL,
+		table:    t,
+		logger:   logger,
+		appURL:   appURL,
+		viewport: vp,
 	}
 }
