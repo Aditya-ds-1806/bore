@@ -32,7 +32,7 @@ builds:
 signs:
   -
     cmd: cosign
-    artifacts: archive
+    artifacts: checksum
     signature: "${artifact}.bundle"
     args:
       - sign-blob
