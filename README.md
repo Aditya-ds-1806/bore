@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="pages/assets/Bore.png" alt="Bore" height="120">
+  <img src="https://raw.githubusercontent.com/Aditya-ds-1806/bore/refs/heads/main/pages/assets/bore.png" alt="Bore" height="120">
 </p>
 
 <h1 align="center">Bore</h1>
