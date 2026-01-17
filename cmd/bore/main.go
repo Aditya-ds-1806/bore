@@ -3,7 +3,6 @@ package main
 import (
 	"bore/internal/client"
 	"bore/internal/client/reqlogger"
-	"bore/internal/server"
 	"bore/internal/ui/tui"
 	"bore/internal/ui/web"
 	"flag"
@@ -14,17 +13,25 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var AppMode string
+var AppVersion string
 
 type Flags struct {
 	UpstreamURL string
 }
 
 func ParseFlags() Flags {
+	version := flag.Bool("version", false, "Show application version")
+	flag.BoolVar(version, "v", false, "Show application version")
+
 	upstreamURL := flag.String("url", "", "Upstream URL to proxy requests to")
 	flag.StringVar(upstreamURL, "u", "", "Upstream URL to proxy requests to")
 
 	flag.Parse()
+
+	if *version {
+		fmt.Println("bore:", AppVersion)
+		os.Exit(0)
+	}
 
 	if *upstreamURL == "" {
 		fmt.Println("Upstream URL is required. Use -url or -u to specify it.")
@@ -33,20 +40,6 @@ func ParseFlags() Flags {
 
 	return Flags{
 		UpstreamURL: *upstreamURL,
-	}
-}
-
-func RunBoreServer(wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	bs := server.NewBoreServer()
-
-	fmt.Println("Bore server is running on http://localhost:8080/")
-
-	err := bs.StartBoreServer()
-	if err != nil {
-		fmt.Println("Failed to start bore server")
-		panic(err)
 	}
 }
 
@@ -68,12 +61,6 @@ func RunBoreWebClient(logger *reqlogger.Logger, wg *sync.WaitGroup) {
 func main() {
 	var wg sync.WaitGroup
 	defer wg.Wait()
-
-	if AppMode == "server" {
-		wg.Add(1)
-		go RunBoreServer(&wg)
-		return
-	}
 
 	flags := ParseFlags()
 	logger := reqlogger.NewLogger()

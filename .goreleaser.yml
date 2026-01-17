@@ -8,22 +8,22 @@ builds:
   - 
     id: bore-server
     binary: bore-server
-    main: ./cmd/main.go
+    main: ./cmd/bore-server/main.go
     env:
       - CGO_ENABLED=0
     ldflags:
-      - "-s -w -X 'main.AppMode=server'"
+      - "-s -w -X 'main.AppVersion={{.Version}}'"
     targets:
       - go_first_class
 
   - 
     id: bore-client
     binary: bore
-    main: ./cmd/main.go
+    main: ./cmd/bore/main.go
     env:
       - CGO_ENABLED=0
     ldflags:
-      - "-s -w -X 'main.AppMode=client' -X 'bore/internal/client.BoreServerHost=trybore.com' -X 'bore/internal/client.WSScheme=wss'"
+      - "-s -w -X 'main.AppVersion={{.Version}}' -X 'bore/internal/client.BoreServerHost=trybore.com' -X 'bore/internal/client.WSScheme=wss'"
     targets:
       - go_first_class
   
