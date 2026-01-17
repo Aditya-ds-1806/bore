@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Bore - A simple, modern TCP tunnel for exposing local ports to the internet">
+    <title>Bore - Tunnel to the Internet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="./index.css">
+</head>
+
+<body>
+    <div class="bg-grid"></div>
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
+
+    <header>
+        <nav class="container">
+            <a href="#" class="logo">
+                <span>bore</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="#use-cases">Use Cases</a></li>
+            </ul>
+            <a href="https://github.com/Aditya-ds-1806/bore" class="github-btn" target="_blank">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                </svg>
+                <span>Star on GitHub</span>
+                <span class="github-stars" id="github-stars">⭐</span>
+            </a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <img src="./assets/bore.png" alt="Bore" class="hero-logo">
+                    <div class="hero-badge">✨ Free & Open Source</div>
+                    <h1>Tunnel through to the internet</h1>
+                    <p>A blazing fast TCP tunnel that exposes your localhost to the world. No configuration, no hassle —
+                        just works.</p>
+                    <div class="hero-buttons">
+                        <a href="https://github.com/Aditya-ds-1806/bore#installation" class="btn btn-primary">
+                            Get Started
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                        <a href="https://github.com/Aditya-ds-1806/bore" class="btn btn-secondary">
+                            View Docs
+                        </a>
+                    </div>
+                </div>
+                <div class="terminal">
+                    <div class="terminal-header">
+                        <div class="terminal-dot red"></div>
+                        <div class="terminal-dot yellow"></div>
+                        <div class="terminal-dot green"></div>
+                        <div class="terminal-title">Terminal</div>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="terminal-line">
+                            <span class="terminal-prompt">$</span>
+                            <span class="terminal-command" id="typed-command"></span><span class="cursor"
+                                id="typing-cursor"></span>
+                        </div>
+                        <div class="terminal-output" id="terminal-output" style="display: none;">
+                            <div class="terminal-success">✓ Connected to trybore.com</div>
+                            <div>Forwarding <span class="terminal-url">https://abc123.trybore.com</span> →
+                                localhost:3000
+                            </div>
+                            <div style="margin-top: 16px; color: var(--text-muted);">Press Ctrl+C to close the tunnel
+                            </div>
+                        </div>
+                        <div class="terminal-line" id="final-prompt" style="margin-top: 20px; display: none;">
+                            <span class="terminal-prompt">$</span>
+                            <span class="cursor"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">Features</div>
+                <h2 class="section-title">Built for developers</h2>
+                <p class="section-subtitle">Everything you need to expose your local server. Nothing you don't.</p>
+            </div>
+            <div class="features-list">
+                <div class="feature-row">
+                    <div class="feature-keyword">perf</div>
+                    <div class="feature-content">
+                        <h3><span class="feature-emoji">⚡</span> Blazing Fast</h3>
+                        <p>Written in Go for maximum performance. Sub-millisecond overhead on tunneled connections.</p>
+                    </div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-keyword">security</div>
+                    <div class="feature-content">
+                        <h3><span class="feature-emoji">🔒</span> Encrypted</h3>
+                        <p>All traffic is encrypted end-to-end. Your data never travels unprotected.</p>
+                    </div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-keyword">dx</div>
+                    <div class="feature-content">
+                        <h3><span class="feature-emoji">🎯</span> Zero Config</h3>
+                        <p>One command to start tunneling. No config files, no signup, no friction.</p>
+                    </div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-keyword">debug</div>
+                    <div class="feature-content">
+                        <h3><span class="feature-emoji">🔍</span> Request Inspector</h3>
+                        <p>Built-in web UI to inspect, replay, and debug HTTP requests in real-time.</p>
+                    </div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-keyword">tui</div>
+                    <div class="feature-content">
+                        <h3><span class="feature-emoji">💻</span> Terminal UI</h3>
+                        <p>Beautiful terminal interface with live logs and powerful filtering.</p>
+                    </div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-keyword">deploy</div>
+                    <div class="feature-content">
+                        <h3><span class="feature-emoji">🌐</span> Self-Hostable</h3>
+                        <p>Run your own bore server. Your infrastructure, your rules, zero vendor lock-in.</p>
+                    </div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-keyword">license</div>
+                    <div class="feature-content">
+                        <h3><span class="feature-emoji">⭐</span> 100% Open Source</h3>
+                        <p>MIT licensed, free forever. No hidden fees, no premium tiers, no gotchas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">Quick Start</div>
+                <h2 class="section-title">Up and running in seconds</h2>
+                <p class="section-subtitle">Three commands. That's all it takes.</p>
+            </div>
+            <div class="tunnel-illustration">
+                <img src="./assets/tunnel.png" alt="Bore tunnel diagram - Client drilling through to Bore Server">
+            </div>
+            <div class="steps-container">
+                <div class="steps-line"></div>
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Install bore</h3>
+                        <p>Download the binary or install with Go.</p>
+                        <code class="step-code">go install github.com/Aditya-ds-1806/bore@latest</code>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Start your local server</h3>
+                        <p>Run your development server on any port.</p>
+                        <code class="step-code">npm run dev  # or any server on port 3000</code>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Create a tunnel</h3>
+                        <p>Expose your local port to a public URL instantly.</p>
+                        <code class="step-code">bore -u http://localhost:3000</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="use-cases" class="use-cases">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">Use Cases</div>
+                <h2 class="section-title">Perfect for</h2>
+                <p class="section-subtitle">Whether you're demoing to clients or testing webhooks, bore has you covered.
+                </p>
+            </div>
+            <div class="use-cases-grid">
+                <div class="use-case-card">
+                    <div class="use-case-icon">🎨</div>
+                    <div class="use-case-content">
+                        <h3>Client Demos</h3>
+                        <p>Show your work in progress to clients without deploying. Get instant feedback on local
+                            builds.</p>
+                    </div>
+                </div>
+                <div class="use-case-card">
+                    <div class="use-case-icon">🔗</div>
+                    <div class="use-case-content">
+                        <h3>Webhook Testing</h3>
+                        <p>Test webhooks from Stripe, GitHub, Twilio, and more on your local machine.</p>
+                    </div>
+                </div>
+                <div class="use-case-card">
+                    <div class="use-case-icon">📱</div>
+                    <div class="use-case-content">
+                        <h3>Mobile Development</h3>
+                        <p>Connect your mobile app to your local backend API for testing and debugging.</p>
+                    </div>
+                </div>
+                <div class="use-case-card">
+                    <div class="use-case-icon">🤝</div>
+                    <div class="use-case-content">
+                        <h3>Team Collaboration</h3>
+                        <p>Share your local dev environment with remote team members instantly.</p>
+                    </div>
+                </div>
+                <div class="use-case-card">
+                    <div class="use-case-icon">🧪</div>
+                    <div class="use-case-content">
+                        <h3>API Integration Testing</h3>
+                        <p>Test third-party integrations that require public URLs without deploying.</p>
+                    </div>
+                </div>
+                <div class="use-case-card">
+                    <div class="use-case-icon">🎓</div>
+                    <div class="use-case-content">
+                        <h3>Workshops & Teaching</h3>
+                        <p>Share projects with students or workshop participants easily.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <div class="cta-box">
+                <div class="cta-content">
+                    <h2>Free forever. No strings attached.</h2>
+                    <p>No signup, no credit card, no usage limits. Just install and start tunneling.</p>
+                    <a href="https://github.com/Aditya-ds-1806/bore" class="btn btn-primary">
+                        Get Started — It's Free
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <a href="#" class="footer-logo">
+                    <img src="./assets/bore.png" alt="Bore">
+                    <span>bore</span>
+                </a>
+                <ul class="footer-links">
+                    <li><a href="https://github.com/Aditya-ds-1806/bore">GitHub</a></li>
+                    <li><a href="https://github.com/Aditya-ds-1806/bore/issues">Issues</a></li>
+                    <li><a href="https://github.com/Aditya-ds-1806/bore/blob/main/LICENSE">License</a></li>
+                </ul>
+                <p class="footer-copy">Open source under MIT License</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="./index.js"></script>
+</body>
+
+</html>
