@@ -23,7 +23,7 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - "-s -w -X 'main.AppVersion={{.Version}}' -X 'bore/internal/client.BoreServerHost=trybore.com' -X 'bore/internal/client.WSScheme=wss'"
+      - "-s -w -X 'main.AppVersion={{.Version}}' -X 'bore/internal/client.BoreServerHost=app.trybore.com' -X 'bore/internal/client.WSScheme=wss'"
     targets:
       - go_first_class
   

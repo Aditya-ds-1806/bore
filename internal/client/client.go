@@ -43,10 +43,18 @@ func (bc *BoreClient) NewWSConnection() error {
 	conn, res, err := dialer.Dial(wsConnStr, nil)
 
 	if err == nil {
+		var domain string = BoreServerHost
+
 		appId := res.Header.Get("X-Bore-App-ID")
+		parts := strings.Split(BoreServerHost, ".")
+
+		if len(parts) > 2 {
+			domain = strings.Join(parts[1:], ".")
+		}
+
 		bc.wsConn = conn
 		bc.AppId = appId
-		bc.AppURL = fmt.Sprintf("https://%s.%s", appId, BoreServerHost)
+		bc.AppURL = fmt.Sprintf("https://%s.%s", appId, domain)
 		bc.Ready <- struct{}{}
 		close(bc.Ready)
 	}
