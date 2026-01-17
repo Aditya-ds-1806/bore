@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 Restart=always
 WorkingDirectory=/home/ec2-user/bore
-ExecStart=/home/ec2-user/bore/bore-server
+ExecStart=/home/ec2-user/bore/build/bore-server
 
 [Install]
 WantedBy=multi-user.target

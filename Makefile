@@ -1,21 +1,18 @@
 .PHONY: protos
 
 build-client:
-	go build -o bore -ldflags "-X 'main.AppMode=client' -X 'bore/internal/client.BoreServerHost=trybore.com' -X 'bore/internal/client.WSScheme=wss'" cmd/main.go
+	go build -o build/bore \
+		-ldflags "\
+			-X 'bore/internal/client.BoreServerHost=trybore.com' \
+			-X 'bore/internal/client.WSScheme=wss' \
+			-X 'main.AppVersion=0.1.0'" \
+		cmd/bore/main.go
 
 build-server:
-	go build -o bore-server -ldflags "-X 'main.AppMode=server'" cmd/main.go
-
-run-client:
-	go run -race -ldflags "-X 'main.AppMode=client' -X 'bore/internal/client.BoreServerHost=127.0.0.1'" cmd/main.go
-
-run-server:
-	go run -race -ldflags "-X 'main.AppMode=server'" cmd/main.go
-
-start-server:
-	nginx -t -c $(PWD)/nginx.conf
-	nginx -c $(PWD)/nginx.conf
-	./bore-server
+	go build -o build/bore-server \
+		-ldflags "\
+			-X 'main.AppVersion=0.1.0'" \
+		cmd/bore-server/main.go
 
 protos:
 	rm -rf borepb

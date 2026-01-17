@@ -1,7 +1,5 @@
 main
-bore
-bore-server
+build
 *.pem
 logs
-nginx.local.conf
 dist
