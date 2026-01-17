@@ -58,6 +58,14 @@ make build-client
 
 The binary will be available at `./build/bore`.
 
+### Prebuilt binaries
+
+If you prefer not to build from source, prebuilt binaries are available on the Releases page:
+
+[https://github.com/Aditya-ds-1806/bore/releases](https://github.com/Aditya-ds-1806/bore/releases)
+
+Binaries are provided for major platforms — download the appropriate release for your OS and architecture.
+
 ## Usage
 
 Expose your local server to the internet with a single command:
