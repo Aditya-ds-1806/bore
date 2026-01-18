@@ -62,6 +62,10 @@ homebrew_casks:
       pull_request:
         enabled: true
         draft: false
+        base:
+          owner: Aditya-ds-1806
+          name: homebrew-tap
+          branch: main
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
