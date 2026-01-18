@@ -43,6 +43,31 @@ signs:
       - "--bundle=${signature}"
       - "${artifact}"
 
+homebrew_casks:
+  -
+    name: bore
+    binaries:
+      - bore
+    url:
+      template: "https://github.com/aditya-ds-1806/bore/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+      verified: "github.com/aditya-ds-1806/bore/"
+    homepage: "https://trybore.com/"
+    description: "Blazing fast, free TCP tunnel that exposes your localhost to the world"
+    directory: Casks
+    skip_upload: false
+    repository:
+      owner: Aditya-ds-1806
+      name: homebrew-tap
+      branch: "release/{{ .ProjectName }}-{{ .Tag }}"
+      pull_request:
+        enabled: true
+        draft: false
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+      signing:
+        enabled: false
+
 report_sizes: true
 
 changelog:
