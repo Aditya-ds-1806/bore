@@ -45,6 +45,9 @@ signs:
 
 report_sizes: true
 
+changelog:
+  use: github
+
 release:
   footer: >-
 
