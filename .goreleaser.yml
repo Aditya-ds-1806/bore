@@ -26,7 +26,12 @@ builds:
       - "-s -w -X 'main.AppVersion={{.Version}}' -X 'bore/internal/client.BoreServerHost=app.trybore.com' -X 'bore/internal/client.WSScheme=wss'"
     targets:
       - go_first_class
-  
+
+source:
+  enabled: true
+  name_template: "{{ .ProjectName }}-{{ .Version }}"
+  format: "tar.gz"
+
 signs:
   -
     cmd: cosign
