@@ -42,10 +42,11 @@
 
 ## Installation
 
-### Using Go
+### macOS (Homebrew)
 
 ```bash
-go install github.com/Aditya-ds-1806/bore/cmd/bore@latest
+brew tap aditya-ds-1806/bore
+brew install bore --cask
 ```
 
 ### From Source
