@@ -59,13 +59,13 @@ homebrew_casks:
       owner: Aditya-ds-1806
       name: homebrew-tap
       branch: "release/{{ .ProjectName }}-{{ .Tag }}"
-      pull_request:
-        enabled: true
-        draft: false
-        base:
-          owner: Aditya-ds-1806
-          name: homebrew-tap
-          branch: main
+      # pull_request:
+      #   enabled: false
+      #   draft: false
+      #   base:
+      #     owner: Aditya-ds-1806
+      #     name: homebrew-tap
+      #     branch: main
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
