@@ -1,6 +1,6 @@
 .PHONY: protos
 
-VERSION := $(shell git describe --tags --abbrev=0)
+VERSION := dev
 
 print-version:
 	@echo $(VERSION)
