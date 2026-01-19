@@ -72,6 +72,32 @@ homebrew_casks:
       signing:
         enabled: false
 
+scoops:
+  -
+    name: bore
+    url_template: "https://github.com/aditya-ds-1806/bore/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    directory: bucket
+    homepage: "https://trybore.com/"
+    description: "Blazing fast, free TCP tunnel that exposes your localhost to the world"
+    license: MIT
+    skip_upload: false
+    repository:
+      owner: Aditya-ds-1806
+      name: scoop-bucket
+      branch: "release/{{ .ProjectName }}-{{ .Tag }}"
+      pull_request:
+        enabled: true
+        draft: false
+        base:
+          owner: Aditya-ds-1806
+          name: scoop-bucket
+          branch: main
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+      signing:
+        enabled: false
+
 report_sizes: true
 
 changelog:
