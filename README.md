@@ -56,6 +56,12 @@ scoop bucket add aditya-ds-1806 https://github.com/aditya-ds-1806/scoop-bucket
 scoop install aditya-ds-1806/bore
 ```
 
+### Linux
+
+```bash
+curl -fsSL https://trybore.com/install.sh | sh
+```
+
 ### From Source
 
 ```bash
