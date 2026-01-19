@@ -49,6 +49,13 @@ brew tap aditya-ds-1806/bore
 brew install bore --cask
 ```
 
+### Windows (Scoop)
+
+```bash
+scoop bucket add aditya-ds-1806 https://github.com/aditya-ds-1806/scoop-bucket
+scoop install aditya-ds-1806/bore
+```
+
 ### From Source
 
 ```bash
