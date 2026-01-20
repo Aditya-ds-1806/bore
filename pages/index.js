@@ -59,7 +59,6 @@ function typeCommand() {
 
 function renderInstallCommands() {
     const installBtns = document.querySelectorAll('.install-btn');
-    const activeInstallBtn = document.querySelector('.install-btn.btn-primary');
 
     const installInstructions = {
         Homebrew: [
@@ -78,10 +77,11 @@ function renderInstallCommands() {
         btn.addEventListener('click', () => {
             installBtns.forEach(b => {
                 b.classList.remove('btn-primary');
-                b.classList.remove('btn-secondary');
+                b.classList.add('btn-secondary');
             });
 
             btn.classList.add('btn-primary');
+            btn.classList.remove('btn-secondary');
 
             const platform = btn.textContent.trim();
             const commands = installInstructions[platform];
