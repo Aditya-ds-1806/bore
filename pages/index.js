@@ -57,4 +57,41 @@ function typeCommand() {
     }
 }
 
+function renderInstallCommands() {
+    const installBtns = document.querySelectorAll('.install-btn');
+    const activeInstallBtn = document.querySelector('.install-btn.btn-primary');
+
+    const installInstructions = {
+        Homebrew: [
+            'brew tap aditya-ds-1806/bore',
+            'brew install bore --cask'
+        ],
+        Scoop: [
+            'scoop bucket add aditya-ds-1806 https://github.com/aditya-ds-1806/scoop-bucket',
+            'scoop install bore'
+        ],
+        Linux: ['curl -fsSL https://trybore.com/install.sh | sh'],
+        NPM: ['Coming soon!']
+    };
+
+    installBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            installBtns.forEach(b => {
+                b.classList.remove('btn-primary');
+                b.classList.remove('btn-secondary');
+            });
+
+            btn.classList.add('btn-primary');
+
+            const platform = btn.textContent.trim();
+            const commands = installInstructions[platform];
+            
+            const stepCode = document.querySelector('.install-commands-container .step-code');
+            stepCode.innerHTML = commands.join('<br>');
+        });
+    });
+}
+
+renderInstallCommands();
+
 setTimeout(typeCommand, 1000);
