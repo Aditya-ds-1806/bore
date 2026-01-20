@@ -51,7 +51,7 @@
                     <p>A blazing fast TCP tunnel that exposes your localhost to the world. No configuration, no hassle —
                         just works.</p>
                     <div class="hero-buttons">
-                        <a href="https://github.com/Aditya-ds-1806/bore#installation" class="btn btn-primary">
+                        <a href="#how-it-works" class="btn btn-primary">
                             Get Started
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
@@ -162,9 +162,6 @@
                 <h2 class="section-title">Up and running in seconds</h2>
                 <p class="section-subtitle">Three commands. That's all it takes.</p>
             </div>
-            <div class="tunnel-illustration">
-                <img src="./assets/tunnel.png" alt="Bore tunnel diagram - Client drilling through to Bore Server">
-            </div>
             <div class="steps-container">
                 <div class="steps-line"></div>
                 <div class="step">
@@ -172,7 +169,30 @@
                     <div class="step-content">
                         <h3>Install bore</h3>
                         <p>Download the binary or install with Go.</p>
-                        <code class="step-code">go install github.com/Aditya-ds-1806/bore@latest</code>
+                        <div class="install-commands-container">
+                            <div class="install-buttons-container">
+                                <code class="install-btn btn-secondary">
+                                    <img width="25" src="https://upload.wikimedia.org/wikipedia/commons/d/db/Npm-logo.svg" alt="Npm Logo">
+                                    <span>NPM</span>
+                                </code>
+                                <code class="install-btn btn-primary">
+                                    <img height="20" src="https://brew.sh/assets/img/homebrew.svg" alt="Homebrew Logo">
+                                    <span>Brew</span>
+                                </code>
+                                <code class="install-btn btn-secondary">
+                                    <img height="20" src="https://icon.icepanel.io/Technology/png-shadow-512/Linux.png" alt="Linux Logo">
+                                    <span>Linux</span>
+                                </code>
+                                <code class="install-btn btn-secondary">
+                                    <img height="20" src="https://scoop.sh/logo/scoop.svg" alt="Scoop Logo">
+                                    <span>Scoop</span>
+                                </code>
+                            </div>
+                            <code class="step-code" style="width: 100%">
+                                brew tap aditya-ds-1806/bore<br>
+                                brew install bore --cask
+                            </code>
+                        </div>
                     </div>
                 </div>
                 <div class="step">
@@ -191,6 +211,16 @@
                         <code class="step-code">bore -u http://localhost:3000</code>
                     </div>
                 </div>
+            </div>
+
+            <p class="section-subtitle">
+                Prefer to handle the binary yourself? Download a <a class="link"
+                    href="https://github.com/Aditya-ds-1806/bore/releases">prebuilt release</a> for your OS and run it
+                directly—no package manager required.
+            </p>
+
+            <div class="tunnel-illustration">
+                <img src="./assets/tunnel.png" alt="Bore tunnel diagram - Client drilling through to Bore Server">
             </div>
         </div>
     </section>
@@ -257,7 +287,7 @@
                 <div class="cta-content">
                     <h2>Free forever. No strings attached.</h2>
                     <p>No signup, no credit card, no usage limits. Just install and start tunneling.</p>
-                    <a href="https://github.com/Aditya-ds-1806/bore" class="btn btn-primary">
+                    <a href="#how-it-works" class="btn btn-primary">
                         Get Started — It's Free
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
