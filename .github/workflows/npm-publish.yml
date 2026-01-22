@@ -37,5 +37,3 @@ jobs:
           npm version 0.1.5 --no-git-tag-version
       - run: npm ci
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
