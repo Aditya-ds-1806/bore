@@ -1,0 +1,55 @@
+{
+  "name": "bore-cli",
+  "version": "0.1.5",
+  "description": "Blazing fast, free TCP tunnel that exposes your localhost to the world",
+  "bin": {
+    "bore": "index.js"
+  },
+  "keywords": [
+    "go",
+    "cli",
+    "golang",
+    "webhooks",
+    "terminal",
+    "networking",
+    "proxy",
+    "websocket",
+    "devtools",
+    "foss",
+    "self-hosted",
+    "ngrok",
+    "localhost",
+    "tunneling",
+    "tcp-tunnel"
+  ],
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "arm64",
+    "x64",
+    "ia32",
+    "arm"
+  ],
+  "homepage": "https://github.com/Aditya-ds-1806/bore#readme",
+  "bugs": {
+    "url": "https://github.com/Aditya-ds-1806/bore/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aditya-ds-1806/bore.git"
+  },
+  "license": "MIT",
+  "author": "Aditya DS",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "node post-install.js",
+    "test": "node index.js --version"
+  },
+  "dependencies": {
+    "tar": "^7.5.6"
+  }
+}

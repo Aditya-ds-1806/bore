@@ -62,7 +62,7 @@ function renderInstallCommands() {
 
     const installInstructions = {
         Homebrew: [
-            'brew tap aditya-ds-1806/bore',
+            'brew tap aditya-ds-1806/tap',
             'brew install bore --cask'
         ],
         Scoop: [
