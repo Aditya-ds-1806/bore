@@ -42,6 +42,12 @@
 
 ## Installation
 
+### npm
+
+```bash
+npm i -g bore-cli
+```
+
 ### macOS (Homebrew)
 
 ```bash

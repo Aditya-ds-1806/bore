@@ -73,6 +73,9 @@ function renderInstallCommands() {
         NPM: ['npm install -g bore-cli']
     };
 
+    const stepCode = document.querySelector('.install-commands-container .step-code');
+    stepCode.innerHTML = installInstructions.NPM.join('<br>');
+
     installBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             installBtns.forEach(b => {
