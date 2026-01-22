@@ -47,7 +47,8 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "node post-install.js",
-    "test": "node index.js --version"
+    "test": "node index.js --version",
+    "prepack": "cp ../../README.md ./README.md && cp ../../LICENSE ./LICENSE"
   },
   "dependencies": {
     "tar": "^7.5.6"
