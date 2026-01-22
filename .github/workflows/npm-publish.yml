@@ -14,10 +14,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: cd scripts/npm
-      - run: npm ci
-      - run: npm run postinstall
-      - run: npm run test
+      - run: cd scripts/npm && npm ci
+      - run: cd scripts/npm && npm run test
 
   publish-npm:
     needs: build
