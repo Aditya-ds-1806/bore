@@ -6,6 +6,10 @@ on:
     tags:
       - "v*"
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,26 +17,24 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-      - run: cd scripts/npm
-      - run: npm ci
-      - run: npm run postinstall
-      - run: npm run test
+          node-version: 24
+      - run: cd scripts/npm && npm ci
+      - run: cd scripts/npm && npm run test
 
   publish-npm:
     needs: build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scripts/npm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org/
-      - run: cd scripts/npm
+      - run: npm install -g npm@latest
       - run: |
-          echo ${GITHUB_REF#refs/tags/v}
-          npm version ${GITHUB_REF#refs/tags/v}
+          npm version ${{ github.ref_name }} --no-git-tag-version
       - run: npm ci
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
