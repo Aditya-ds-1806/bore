@@ -1,6 +1,6 @@
 {
   "name": "bore-cli",
-  "version": "0.1.5",
+  "version": "0.1.0",
   "description": "Blazing fast, free TCP tunnel that exposes your localhost to the world",
   "bin": {
     "bore": "index.js"
