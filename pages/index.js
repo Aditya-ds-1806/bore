@@ -70,7 +70,7 @@ function renderInstallCommands() {
             'scoop install bore'
         ],
         Linux: ['curl -fsSL https://trybore.com/install.sh | sh'],
-        NPM: ['Coming soon!']
+        NPM: ['npm install -g bore-cli']
     };
 
     installBtns.forEach(btn => {
