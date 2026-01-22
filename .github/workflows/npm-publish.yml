@@ -30,7 +30,7 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org/
       - run: |
-          npm version 0.1.0 --no-git-tag-version
+          npm version patch --no-git-tag-version
       - run: npm ci
       - run: npm publish
         env:
