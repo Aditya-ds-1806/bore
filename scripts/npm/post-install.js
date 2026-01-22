@@ -36,8 +36,6 @@ if (!archName) {
     process.exit(1);
 }
 
-version = version.slice(1); // npm-publish.yml injects raw tag like v0.1.5
-
 const tag = `v${version}`;
 const artifactName = `bore_${version}_${platfomName}_${archName}.tar.gz`;
 const artifactURL = `https://github.com/Aditya-ds-1806/bore/releases/download/${tag}/${artifactName}`;
