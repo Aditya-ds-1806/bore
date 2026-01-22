@@ -6,7 +6,7 @@ const path = require("path");
 const https = require("https");
 const tar = require("tar");
 
-const { version, } = require("./package.json");
+let { version } = require("./package.json");
 const platform = os.platform(); // 'aix', 'darwin', 'freebsd', 'linux', 'openbsd', 'sunos', 'win32'
 const arch = os.arch(); // 'arm', 'arm64', 'ia32', 'loong64', 'mips', 'mipsel', 'ppc64', 'riscv64', 's390x', 'x64'
 
@@ -35,6 +35,8 @@ if (!archName) {
     console.error(`❌ Unsupported architecture: ${platform} ${arch}`);
     process.exit(1);
 }
+
+version = version.slice(1); // npm-publish.yml injects raw tag like v0.1.5
 
 const tag = `v${version}`;
 const artifactName = `bore_${version}_${platfomName}_${archName}.tar.gz`;

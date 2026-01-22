@@ -35,6 +35,6 @@ jobs:
           registry-url: https://registry.npmjs.org/
       - run: npm install -g npm@latest
       - run: |
-          npm version 0.1.5 --no-git-tag-version
+          npm version ${{ github.ref_name }} --no-git-tag-version
       - run: npm ci
       - run: npm publish
