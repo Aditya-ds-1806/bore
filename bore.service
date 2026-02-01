@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 Restart=always
-WorkingDirectory=/home/ec2-user/bore
-ExecStart=/home/ec2-user/bore/build/bore-server
+WorkingDirectory=/usr/local/bin/bore
+ExecStart=/usr/local/bin/bore/bore-server
 
 [Install]
 WantedBy=multi-user.target
