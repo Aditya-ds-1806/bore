@@ -81,8 +81,15 @@ function downloadArtifact(downloadURL, redirectCount = 5) {
                     cwd: binDir,
                 }).then(() => {
                     fs.unlinkSync(path.join(binDir, artifactName));
-                    fs.unlinkSync(path.join(binDir, "bore-server"));
-                    fs.chmodSync(path.join(binDir, "bore"), 0o755);
+
+                    if (platform === "win32") {
+                        fs.unlinkSync(path.join(binDir, "bore-server.exe"));
+                        fs.chmodSync(path.join(binDir, "bore.exe"), 0o755);    
+                    } else {
+                        fs.unlinkSync(path.join(binDir, "bore-server"));
+                        fs.chmodSync(path.join(binDir, "bore"), 0o755);
+                    }
+
                     console.log("🎉 Installation complete!");
                 }).catch((err) => {
                     console.error(`❌ Error extracting archive: ${err.message}`);
