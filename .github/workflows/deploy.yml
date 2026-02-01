@@ -23,7 +23,7 @@ jobs:
               "set -euo pipefail",
               "mkdir -p /usr/local/bin/bore/logs",
               "cd /usr/local/bin/bore",
-              "git clone --branch v0.1.7 --single-branch https://github.com/Aditya-ds-1806/bore.git" .,
+              "git clone --branch v0.1.7 --single-branch https://github.com/Aditya-ds-1806/bore.git .",
               "curl -fsSL -o bore.tar.gz https://github.com/Aditya-ds-1806/bore/releases/download/v0.1.7/bore_0.1.7_linux_amd64.tar.gz",
               "sudo cp ./nginx.conf /etc/nginx/nginx.conf",
               "sudo cp ./bore.service /etc/systemd/system/bore.service",
