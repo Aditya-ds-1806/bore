@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: configure aws credentials
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        uses: aws-actions/configure-aws-credentials@v5.1.1
         with:
           role-to-assume: arn:aws:iam::841279781047:role/ec2-ssm-role
           role-session-name: GitHubActionsSession
@@ -18,4 +18,10 @@ jobs:
       
       - name: Get caller identity
         run: |
-          aws sts get-caller-identity
+          aws ssm send-command --instance-ids "i-0df7c12433cac3f66" --document-name "AWS-RunShellScript" --parameters '{
+            "commands":[
+              "curl -O /etc/nginx/nginx.conf https://raw.githubusercontent.com/Aditya-ds-1806/bore/refs/tags/v0.1.7/nginx.conf",
+              "curl -O /etc/systemd/system/bore.service https://raw.githubusercontent.com/Aditya-ds-1806/bore/refs/tags/v0.1.7/bore.service",
+              "systemctl restart bore"
+            ]}
+          '
