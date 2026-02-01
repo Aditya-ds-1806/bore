@@ -25,6 +25,7 @@ jobs:
               "mkdir -p /usr/local/bin/bore",
               "cd /usr/local/bin/bore",
               "git clone https://github.com/Aditya-ds-1806/bore.git .",
+              "git checkout update/deploy-ci",
               "mkdir -p logs",
               "curl -fsSL -o bore.tar.gz https://github.com/Aditya-ds-1806/bore/releases/download/v0.1.7/bore_0.1.7_linux_amd64.tar.gz",
               "sudo cp ./nginx.conf /etc/nginx/nginx.conf",
