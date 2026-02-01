@@ -38,9 +38,43 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+  
+  deploy-ec2:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v5.1.1
+        with:
+          role-to-assume: arn:aws:iam::841279781047:role/ec2-ssm-role
+          role-session-name: GitHubActionsSession
+          aws-region: ap-south-1
+      
+      - name: Get caller identity
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          aws ssm send-command --instance-ids "i-0df7c12433cac3f66" --document-name "AWS-RunShellScript" --parameters "{
+            \"commands\":[
+              \"set -euo pipefail\",
+              \"rm -rf /usr/local/bin/bore\",
+              \"mkdir -p /usr/local/bin/bore\",
+              \"cd /usr/local/bin/bore\",
+              \"git clone https://github.com/Aditya-ds-1806/bore.git .\",
+              \"mkdir -p logs\",
+              \"curl -fsSL -o bore.tar.gz https://github.com/Aditya-ds-1806/bore/releases/download/${GITHUB_REF_NAME}/bore_${VERSION}_linux_amd64.tar.gz\",
+              \"sudo cp ./nginx.conf /etc/nginx/nginx.conf\",
+              \"sudo cp ./bore.service /etc/systemd/system/bore.service\",
+              \"sudo cp ./logrotate.conf /etc/logrotate.d/bore\",
+              \"tar -xvzf bore.tar.gz\",
+              \"rm -rf bore.tar.gz ./bore\",
+              \"sudo systemctl daemon-reload\",
+              \"sudo systemctl reload nginx\",
+              \"sudo systemctl restart bore\"
+            ]
+          }"
       
   build-for-npm:
-    needs: goreleaser
+    needs: deploy-ec2
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +87,7 @@ jobs:
       - run: cd scripts/npm && npm run test
 
   publish-npm:
-    needs: build-for-npm
+    needs: deploy-ec2
     runs-on: ubuntu-latest
     defaults:
       run:
