@@ -1,43 +1,21 @@
 name: Deploy
 on: workflow_dispatch
+
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
-  deploy:
-    name: Deploy
+  S3PackageUpload:
     runs-on: ubuntu-latest
-    environment: EC2
     steps:
-      - name: Build and Deploy Bore Server
-        uses: appleboy/ssh-action@v1
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: 22
-          script: |
-            set -e
-
-            echo "cd into directory"
-            cd ./bore
-
-            echo "create logs dir"
-            mkdir -p logs
-            
-            echo "Fetch latest changes"
-            git fetch origin main
-            git reset --hard origin/main
-
-            echo "Build server"
-            make build-server
-
-            echo "Update logrotate configuration"
-            sudo cp ./logrotate.conf /etc/logrotate.d/bore
-
-            echo "Reload Nginx"
-            sudo cp ./nginx.conf /etc/nginx/nginx.conf
-            sudo systemctl daemon-reload
-            sudo systemctl reload nginx
-
-            echo "Restart Bore Server"
-            sudo cp ./bore.service /etc/systemd/system
-            sudo systemctl daemon-reload
-            sudo systemctl restart bore.service
+          role-to-assume: arn:aws:iam::841279781047:role/ec2-ssm-role
+          role-session-name: GitHubActionsSession
+          aws-region: ap-south-1
+      
+      - name: Get caller identity
+        run: |
+          aws sts get-caller-identity
