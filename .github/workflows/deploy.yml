@@ -20,8 +20,8 @@ jobs:
         run: |
           aws ssm send-command --instance-ids "i-0df7c12433cac3f66" --document-name "AWS-RunShellScript" --parameters '{
             "commands":[
-              "curl -O /etc/nginx/nginx.conf https://raw.githubusercontent.com/Aditya-ds-1806/bore/refs/tags/v0.1.7/nginx.conf",
-              "curl -O /etc/systemd/system/bore.service https://raw.githubusercontent.com/Aditya-ds-1806/bore/refs/tags/v0.1.7/bore.service",
+              "curl -L -o /etc/nginx/nginx.conf https://raw.githubusercontent.com/Aditya-ds-1806/bore/refs/tags/v0.1.7/nginx.conf",
+              "curl -L -o /etc/systemd/system/bore.service https://raw.githubusercontent.com/Aditya-ds-1806/bore/refs/tags/v0.1.7/bore.service",
               "systemctl restart bore"
             ]}
           '
