@@ -20,6 +20,7 @@ jobs:
         run: |
           aws ssm send-command --instance-ids "i-0df7c12433cac3f66" --document-name "AWS-RunShellScript" --parameters '{
             "commands":[
+              "set -euo pipefail",
               "mkdir -p /usr/local/bin/bore/logs",
               "cd /usr/local/bin/bore",
               "curl -L -o bore.tar.gz https://github.com/Aditya-ds-1806/bore/releases/download/v0.1.7/bore_0.1.7_linux_amd64.tar.gz",
