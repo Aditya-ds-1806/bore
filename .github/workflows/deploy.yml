@@ -21,6 +21,7 @@ jobs:
           aws ssm send-command --instance-ids "i-0df7c12433cac3f66" --document-name "AWS-RunShellScript" --parameters '{
             "commands":[
               "set -euo pipefail",
+              "rm -rf /usr/local/bin/bore",
               "mkdir -p /usr/local/bin/bore/logs",
               "cd /usr/local/bin/bore",
               "git clone --branch v0.1.7 --single-branch https://github.com/Aditya-ds-1806/bore.git .",
