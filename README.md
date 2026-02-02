@@ -30,6 +30,12 @@
 
 ---
 
+## Demo
+
+<div align="center">
+  <video width="800" height="450" autoplay muted loop src="https://raw.githubusercontent.com/Aditya-ds-1806/bore/refs/heads/main/pages/assets/bore.mp4"></video>
+</div>
+
 ## Features
 
 - ⚡ **Blazing Fast** — Written in Go for maximum performance with sub-millisecond overhead
