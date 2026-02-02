@@ -33,7 +33,7 @@
 ## Demo
 
 <div align="center">
-  <video width="800" height="450" autoplay muted loop src="https://raw.githubusercontent.com/Aditya-ds-1806/bore/refs/heads/main/pages/assets/bore.mp4"></video>
+  <video width="800" height="450" autoplay playsinline muted loop src="https://github.com/user-attachments/assets/c0ae2864-3103-48cc-805e-c9730db485d9"></video>
 </div>
 
 ## Features
