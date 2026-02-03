@@ -4,7 +4,6 @@ import (
 	"bore/internal/server"
 	"flag"
 	"fmt"
-	"sync"
 )
 
 var AppVersion string
@@ -30,9 +29,6 @@ func ParseFlags() Flags {
 }
 
 func main() {
-	var wg sync.WaitGroup
-	defer wg.Wait()
-
 	flags := ParseFlags()
 
 	if flags.Version {
@@ -40,7 +36,6 @@ func main() {
 		return
 	}
 
-	wg.Add(1)
 	bs := server.NewBoreServer(&server.BoreServerCfg{
 		Port: flags.Port,
 	})
