@@ -16,9 +16,10 @@ import (
 var AppVersion string
 
 type Flags struct {
-	UpstreamURL string
-	Inspect     bool
-	InspectPort int
+	UpstreamURL   string
+	Inspect       bool
+	InspectPort   int
+	allowExternal bool
 }
 
 func ParseFlags() Flags {
@@ -30,6 +31,7 @@ func ParseFlags() Flags {
 
 	inspectPort := flag.Int("inspect-port", 8000, "Port to run the web inspector")
 	inspect := flag.Bool("inspect", true, "Enable the web inspector")
+	allowExternal := flag.Bool("allow-external", false, "Allow proxying non-localhost targets (disabled by default)")
 
 	flag.Parse()
 
@@ -44,9 +46,10 @@ func ParseFlags() Flags {
 	}
 
 	return Flags{
-		UpstreamURL: *upstreamURL,
-		InspectPort: *inspectPort,
-		Inspect:     *inspect,
+		UpstreamURL:   *upstreamURL,
+		InspectPort:   *inspectPort,
+		Inspect:       *inspect,
+		allowExternal: *allowExternal,
 	}
 }
 
@@ -58,8 +61,9 @@ func main() {
 	logger := reqlogger.NewLogger()
 
 	bc := client.NewBoreClient(&client.BoreClientConfig{
-		UpstreamURL: flags.UpstreamURL,
-		Logger:      logger,
+		UpstreamURL:   flags.UpstreamURL,
+		Logger:        logger,
+		AllowExternal: flags.allowExternal,
 	})
 
 	wg.Add(1)
