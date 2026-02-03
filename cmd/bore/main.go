@@ -75,9 +75,12 @@ func main() {
 
 	<-bc.Ready
 
+	portCh := make(chan int, 1)
+
 	ws := web.WebServer{
 		Logger: logger,
 		Port:   flags.InspectPort,
+		PortCh: portCh,
 	}
 
 	if flags.Inspect {
@@ -93,7 +96,7 @@ func main() {
 		}()
 	}
 
-	p := tea.NewProgram(tui.NewModel(logger, bc.AppURL, &ws.Port, flags.Inspect), tea.WithAltScreen())
+	p := tea.NewProgram(tui.NewModel(logger, bc.AppURL, portCh), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("failed to run TUI: %v", err)
 		os.Exit(1)

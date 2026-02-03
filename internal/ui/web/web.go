@@ -16,6 +16,7 @@ const maxRetries int = 10
 type WebServer struct {
 	Logger *reqlogger.Logger
 	Port   int
+	PortCh chan<- int
 }
 
 func (ws *WebServer) StartServer() error {
@@ -115,6 +116,8 @@ func (ws *WebServer) StartServer() error {
 	for range maxRetries {
 		netListerner, err := net.Listen("tcp", fmt.Sprintf(":%d", ws.Port))
 		if err == nil {
+			ws.PortCh <- ws.Port
+			close(ws.PortCh)
 			return http.Serve(netListerner, router)
 		}
 
