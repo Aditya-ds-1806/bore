@@ -27,6 +27,8 @@ type model struct {
 	detailMode  bool
 	selectedLog *reqlogger.Log
 	viewport    viewport.Model
+	wsPort      *int
+	isWsEnabled bool
 }
 
 type tickMsg struct{}
@@ -191,8 +193,11 @@ func (m model) View() string {
 		Foreground(lipgloss.Color("111")).
 		Width(m.width).
 		Align(lipgloss.Center).
-		Render("Web Inspector URL: http://localhost:8000")
+		Render(fmt.Sprintf("Web Inspector URL: http://localhost:%d", *m.wsPort))
 
+	if !m.isWsEnabled {
+		webInspectorLine = ""
+	}
 
 	if m.detailMode {
 		detailView := lipgloss.
@@ -540,7 +545,7 @@ func (m *model) renderLogDetails() string {
 	return content.String()
 }
 
-func NewModel(logger *reqlogger.Logger, appURL string) model {
+func NewModel(logger *reqlogger.Logger, appURL string, wsPort *int, wsEnabled bool) model {
 	columns := getColumns(80)
 
 	var rows []table.Row
@@ -582,5 +587,6 @@ func NewModel(logger *reqlogger.Logger, appURL string) model {
 		logger:   logger,
 		appURL:   appURL,
 		viewport: vp,
+		wsPort:   wsPort,
 	}
 }

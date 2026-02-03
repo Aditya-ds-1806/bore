@@ -253,7 +253,7 @@ func (bs *BoreServer) StartBoreServer() error {
 		bs.port++
 	}
 
-	return nil
+	return fmt.Errorf("failed to start bore server after %d retries", maxRetries)
 }
 
 func NewBoreServer(boreCfg *BoreServerCfg) *BoreServer {
