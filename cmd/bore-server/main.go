@@ -11,16 +11,21 @@ var AppVersion string
 
 type Flags struct {
 	Version bool
+	Port    int
 }
 
 func ParseFlags() Flags {
 	version := flag.Bool("version", false, "Show application version")
 	flag.BoolVar(version, "v", false, "Show application version")
 
+	port := flag.Int("port", 8080, "Port to run the server on")
+	flag.IntVar(port, "p", 8080, "Port to run the server on")
+
 	flag.Parse()
 
 	return Flags{
 		Version: *version,
+		Port:    *port,
 	}
 }
 
@@ -36,9 +41,9 @@ func main() {
 	}
 
 	wg.Add(1)
-	bs := server.NewBoreServer()
-
-	fmt.Println("Bore server is running on http://localhost:8080/")
+	bs := server.NewBoreServer(&server.BoreServerCfg{
+		Port: flags.Port,
+	})
 
 	err := bs.StartBoreServer()
 	if err != nil {

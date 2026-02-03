@@ -4,6 +4,7 @@ import (
 	borepb "bore/borepb"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"slices"
 	"strings"
@@ -19,6 +20,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const maxRetries int = 10
+
 type App struct {
 	wsConn  *websocket.Conn
 	wsMutex *sync.Mutex
@@ -29,6 +32,11 @@ type BoreServer struct {
 	reqIdChanMap map[string]chan *borepb.Response
 	apps         map[string]App
 	haikunator   *haikunator.Haikunator
+	port         int
+}
+
+type BoreServerCfg struct {
+	Port int
 }
 
 func (bs *BoreServer) generateAppId() string {
@@ -235,10 +243,20 @@ func (bs *BoreServer) StartBoreServer() error {
 		reqLogger.Info("response forwarded to bore client", zap.Int("res_size", size))
 	})
 
-	return http.ListenAndServe(":8080", router)
+	for range maxRetries {
+		netListener, err := net.Listen("tcp", fmt.Sprintf(":%d", bs.port))
+		if err == nil {
+			bs.logger.Info(fmt.Sprintf("Bore server is running on http://localhost:%d/", bs.port))
+			return http.Serve(netListener, router)
+		}
+
+		bs.port++
+	}
+
+	return nil
 }
 
-func NewBoreServer() *BoreServer {
+func NewBoreServer(boreCfg *BoreServerCfg) *BoreServer {
 	cfg := zap.NewProductionConfig()
 
 	cfg.EncoderConfig.TimeKey = "ts"
@@ -262,5 +280,6 @@ func NewBoreServer() *BoreServer {
 		apps:         make(map[string]App),
 		haikunator:   h,
 		logger:       logger,
+		port:         boreCfg.Port,
 	}
 }
