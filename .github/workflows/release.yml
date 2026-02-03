@@ -87,7 +87,7 @@ jobs:
       - run: cd scripts/npm && npm run test
 
   publish-npm:
-    needs: deploy-ec2
+    needs: build-for-npm
     runs-on: ubuntu-latest
     defaults:
       run:
