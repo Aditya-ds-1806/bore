@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -18,19 +19,21 @@ var BoreServerHost string
 var WSScheme string
 
 type BoreClientConfig struct {
-	UpstreamURL string
-	Logger      *reqlogger.Logger
+	UpstreamURL   string
+	Logger        *reqlogger.Logger
+	AllowExternal bool
 }
 
 type BoreClient struct {
-	resty       *resty.Client
-	wsConn      *websocket.Conn
-	wsMutex     *sync.Mutex
-	Logger      *reqlogger.Logger
-	AppId       string
-	AppURL      string
-	UpstreamURL string
-	Ready       chan struct{}
+	resty         *resty.Client
+	wsConn        *websocket.Conn
+	wsMutex       *sync.Mutex
+	Logger        *reqlogger.Logger
+	AppId         string
+	AppURL        string
+	UpstreamURL   string
+	Ready         chan struct{}
+	allowExternal bool
 }
 
 func (bc *BoreClient) NewWSConnection() error {
@@ -127,7 +130,18 @@ func (bc *BoreClient) HandleWSMessages() error {
 }
 
 func (bc *BoreClient) RegisterApp() error {
-	err := bc.NewWSConnection()
+	url, err := url.ParseRequestURI(bc.UpstreamURL)
+	if err != nil {
+		return err
+	}
+
+	isRemoteUpstream := url.Hostname() != "localhost" && !strings.HasPrefix(url.Hostname(), "127.0.0.1")
+
+	if isRemoteUpstream && !bc.allowExternal {
+		return fmt.Errorf("Refusing to proxy non-localhost targets by default. Use --allow-external to override.")
+	}
+
+	err = bc.NewWSConnection()
 	if err != nil {
 		return err
 	}
@@ -141,10 +155,11 @@ func NewBoreClient(cfg *BoreClientConfig) *BoreClient {
 	resty := resty.New().SetBaseURL(cfg.UpstreamURL)
 
 	return &BoreClient{
-		resty:       resty,
-		UpstreamURL: cfg.UpstreamURL,
-		Logger:      cfg.Logger,
-		wsMutex:     &sync.Mutex{},
-		Ready:       make(chan struct{}),
+		resty:         resty,
+		UpstreamURL:   cfg.UpstreamURL,
+		Logger:        cfg.Logger,
+		wsMutex:       &sync.Mutex{},
+		Ready:         make(chan struct{}),
+		allowExternal: cfg.AllowExternal,
 	}
 }

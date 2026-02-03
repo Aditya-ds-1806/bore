@@ -153,9 +153,10 @@ func (bs *BoreServer) StartBoreServer() error {
 		reqLogger := bs.logger.With(
 			zap.String("req_id", requestId),
 			zap.String("client_ip", clientIP),
+			zap.String("app_id", appId),
 		)
 
-		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path), zap.String("app_id", appId))
+		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path))
 
 		app, ok := bs.apps[appId]
 		if !ok {
