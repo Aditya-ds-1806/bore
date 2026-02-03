@@ -3,14 +3,20 @@ package web
 import (
 	"bore/internal/client/reqlogger"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 )
 
+const maxRetries int = 10
+
 type WebServer struct {
 	Logger *reqlogger.Logger
+	Port   int
+	PortCh chan<- int
 }
 
 func (ws *WebServer) StartServer() error {
@@ -107,5 +113,16 @@ func (ws *WebServer) StartServer() error {
 		http.ServeFile(w, r, templatePath)
 	})
 
-	return http.ListenAndServe(":8000", router)
+	for range maxRetries {
+		netListerner, err := net.Listen("tcp", fmt.Sprintf(":%d", ws.Port))
+		if err == nil {
+			ws.PortCh <- ws.Port
+			close(ws.PortCh)
+			return http.Serve(netListerner, router)
+		}
+
+		ws.Port++
+	}
+
+	return fmt.Errorf("failed to start web server after %d retries", maxRetries)
 }
