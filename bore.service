@@ -8,8 +8,8 @@ Group=ssm-user
 Type=simple
 Restart=always
 WorkingDirectory=/usr/local/bin/bore
-ExecStartPre=mkdir -p /usr/local/bin/bore/logs
-ExecStart=/usr/local/bin/bore/bore-server
+ExecStartPre=mkdir -p /var/log/bore
+ExecStart=/usr/local/bin/bore/bore-server --log-file /var/log/bore/bore.log
 
 [Install]
 WantedBy=multi-user.target

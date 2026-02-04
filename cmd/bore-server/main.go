@@ -11,6 +11,7 @@ var AppVersion string
 type Flags struct {
 	Version bool
 	Port    int
+	LogFile string
 }
 
 func ParseFlags() Flags {
@@ -20,11 +21,15 @@ func ParseFlags() Flags {
 	port := flag.Int("port", 8080, "Port to run the server on")
 	flag.IntVar(port, "p", 8080, "Port to run the server on")
 
+	logFile := flag.String("log-file", "./logs/bore.log", "Log file path")
+	flag.StringVar(logFile, "l", "./logs/bore.log", "Log file path")
+
 	flag.Parse()
 
 	return Flags{
 		Version: *version,
 		Port:    *port,
+		LogFile: *logFile,
 	}
 }
 
@@ -37,7 +42,8 @@ func main() {
 	}
 
 	bs := server.NewBoreServer(&server.BoreServerCfg{
-		Port: flags.Port,
+		Port:    flags.Port,
+		LogFile: flags.LogFile,
 	})
 
 	err := bs.StartBoreServer()
