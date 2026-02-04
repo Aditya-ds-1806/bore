@@ -3,6 +3,8 @@ Description=Bore Server
 After=network.target
 
 [Service]
+User=ssm-user
+Group=ssm-user
 Type=simple
 Restart=always
 WorkingDirectory=/usr/local/bin/bore
