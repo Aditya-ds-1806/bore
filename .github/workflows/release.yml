@@ -60,7 +60,6 @@ jobs:
               \"mkdir -p /usr/local/bin/bore\",
               \"cd /usr/local/bin/bore\",
               \"git clone https://github.com/Aditya-ds-1806/bore.git .\",
-              \"mkdir -p logs\",
               \"curl -fsSL -o bore.tar.gz https://github.com/Aditya-ds-1806/bore/releases/download/${GITHUB_REF_NAME}/bore_${VERSION}_linux_amd64.tar.gz\",
               \"sudo cp ./nginx.conf /etc/nginx/nginx.conf\",
               \"sudo cp ./bore.service /etc/systemd/system/bore.service\",

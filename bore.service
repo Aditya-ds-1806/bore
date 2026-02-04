@@ -8,6 +8,7 @@ Group=ssm-user
 Type=simple
 Restart=always
 WorkingDirectory=/usr/local/bin/bore
+ExecStartPre=mkdir -p /usr/local/bin/bore/logs
 ExecStart=/usr/local/bin/bore/bore-server
 
 [Install]
