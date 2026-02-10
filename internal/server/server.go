@@ -270,10 +270,12 @@ func NewBoreServer(boreCfg *BoreServerCfg) *BoreServer {
 		panic(err)
 	}
 
-	_, err = os.Create(boreCfg.LogFile)
-	if err != nil {
-		fmt.Println("Failed to create log file")
-		panic(err)
+	if _, err = os.Stat(boreCfg.LogFile); os.IsNotExist(err) {
+		_, err = os.Create(boreCfg.LogFile)
+		if err != nil {
+			fmt.Println("Failed to create log file")
+			panic(err)
+		}
 	}
 
 	cfg.EncoderConfig.TimeKey = "ts"
