@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"bore/internal/client/reqlogger"
+	"bore/internal/traffik"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -18,14 +18,14 @@ type model struct {
 	table       table.Model
 	width       int
 	height      int
-	logger      *reqlogger.Logger
+	logger      *traffik.Logger
 	appURL      string
 	filterMode  bool
 	filterQuery string
 	cursorPos   int
 	filterError string
 	detailMode  bool
-	selectedLog *reqlogger.Log
+	selectedLog *traffik.Log
 	viewport    viewport.Model
 	wsPort      int
 	portCh      <-chan int
@@ -171,7 +171,7 @@ func (m *model) updateTableRows() {
 		return
 	}
 
-	var logs []*reqlogger.Log
+	var logs []*traffik.Log
 	if m.filterQuery == "" {
 		logs = m.logger.GetLogs()
 	} else {
@@ -288,7 +288,7 @@ func getColumns(width int) []table.Column {
 	}
 }
 
-func logsToRows(logs []*reqlogger.Log) []table.Row {
+func logsToRows(logs []*traffik.Log) []table.Row {
 	var rows []table.Row
 
 	for _, log := range logs {
@@ -554,7 +554,7 @@ func (m *model) renderLogDetails() string {
 	return content.String()
 }
 
-func NewModel(logger *reqlogger.Logger, appURL string, portCh <-chan int) model {
+func NewModel(logger *traffik.Logger, appURL string, portCh <-chan int) model {
 	columns := getColumns(80)
 
 	var rows []table.Row

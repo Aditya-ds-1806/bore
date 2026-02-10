@@ -1,4 +1,4 @@
-package reqlogger
+package traffik
 
 import (
 	"fmt"

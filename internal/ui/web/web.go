@@ -1,7 +1,7 @@
 package web
 
 import (
-	"bore/internal/client/reqlogger"
+	"bore/internal/traffik"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -14,7 +14,7 @@ import (
 const maxRetries int = 10
 
 type WebServer struct {
-	Logger *reqlogger.Logger
+	Logger *traffik.Logger
 	Port   int
 	PortCh chan<- int
 }

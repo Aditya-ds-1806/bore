@@ -5,3 +5,4 @@ logs
 dist
 scripts/npm/node_modules
 scripts/npm/bin
+.vscode
