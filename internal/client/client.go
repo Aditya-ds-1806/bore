@@ -25,6 +25,7 @@ type BoreClientConfig struct {
 	Traffik       *traffik.Logger
 	AllowExternal bool
 	DebugMode     bool
+	Version       string
 }
 
 type BoreClient struct {
@@ -51,6 +52,11 @@ func (bc *BoreClient) NewWSConnection() error {
 	bc.logger.Debug("attempting websocket connection", zap.String("url", wsConnStr))
 	conn, res, err := dialer.Dial(wsConnStr, nil)
 
+	if err != nil {
+		bc.logger.Error("failed to establish websocket connection", zap.Error(err), zap.String("url", wsConnStr))
+		return err
+	}
+
 	conn.SetPingHandler(func(appData string) error {
 		bc.logger.Debug("received ping from server, sending pong", zap.String("appData", appData))
 		return conn.WriteMessage(websocket.PongMessage, []byte(appData))
@@ -60,11 +66,6 @@ func (bc *BoreClient) NewWSConnection() error {
 		bc.logger.Warn("websocket connection closed by server", zap.Int("code", code), zap.String("text", text))
 		return conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(code, ""))
 	})
-
-	if err != nil {
-		bc.logger.Error("failed to establish websocket connection", zap.Error(err), zap.String("url", wsConnStr))
-		return err
-	}
 
 	var domain string = BoreServerHost
 
@@ -199,7 +200,8 @@ func NewBoreClient(boreClientCfg *BoreClientConfig) *BoreClient {
 		NewLoggerCfg().
 		WithLogFilePath(logFilePath).
 		WithStdout(false).
-		WithLoggingEnabled(boreClientCfg.DebugMode)
+		WithLoggingEnabled(boreClientCfg.DebugMode).
+		WithDevMode(strings.Contains(boreClientCfg.Version, "dev"))
 
 	logger, err := logger.NewLogger(cfg)
 
