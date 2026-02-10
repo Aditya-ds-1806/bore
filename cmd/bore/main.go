@@ -18,6 +18,7 @@ var AppVersion string
 type Flags struct {
 	UpstreamURL   string
 	Inspect       bool
+	Debug         bool
 	InspectPort   int
 	allowExternal bool
 }
@@ -28,6 +29,9 @@ func ParseFlags() Flags {
 
 	upstreamURL := flag.String("url", "", "Upstream URL to proxy requests to")
 	flag.StringVar(upstreamURL, "u", "", "Upstream URL to proxy requests to")
+
+	debug := flag.Bool("debug", false, "Enable debug mode (logs internal bore logs to a file)")
+	flag.BoolVar(debug, "d", false, "Enable debug mode (logs internal bore logs to a file)")
 
 	inspectPort := flag.Int("inspect-port", 8000, "Port to run the web inspector")
 	inspect := flag.Bool("inspect", true, "Enable the web inspector")
@@ -50,6 +54,7 @@ func ParseFlags() Flags {
 		InspectPort:   *inspectPort,
 		Inspect:       *inspect,
 		allowExternal: *allowExternal,
+		Debug:         *debug,
 	}
 }
 
@@ -64,6 +69,7 @@ func main() {
 		UpstreamURL:   flags.UpstreamURL,
 		Logger:        logger,
 		AllowExternal: flags.allowExternal,
+		DebugMode:     flags.Debug,
 	})
 
 	wg.Add(1)
