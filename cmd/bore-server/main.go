@@ -44,6 +44,7 @@ func main() {
 	bs := server.NewBoreServer(&server.BoreServerCfg{
 		Port:    flags.Port,
 		LogFile: flags.LogFile,
+		Version: AppVersion,
 	})
 
 	err := bs.StartBoreServer()

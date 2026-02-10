@@ -13,6 +13,7 @@ type LoggerCfg struct {
 	LogFilePath    string
 	Stdout         bool
 	LoggingEnabled bool
+	DevMode        bool
 }
 
 func (cfg *LoggerCfg) WithLogFilePath(path string) *LoggerCfg {
@@ -30,6 +31,11 @@ func (cfg *LoggerCfg) WithLoggingEnabled(enabled bool) *LoggerCfg {
 	return cfg
 }
 
+func (cfg *LoggerCfg) WithDevMode(devMode bool) *LoggerCfg {
+	cfg.DevMode = devMode
+	return cfg
+}
+
 func NewLoggerCfg() *LoggerCfg {
 	return &LoggerCfg{
 		LogFilePath:    "logs/bore.log",
@@ -39,7 +45,32 @@ func NewLoggerCfg() *LoggerCfg {
 }
 
 func NewLogger(loggerCfg *LoggerCfg) (*zap.Logger, error) {
-	cfg := zap.NewProductionConfig()
+	var cfg zap.Config
+
+	if loggerCfg.DevMode {
+		cfg = zap.NewDevelopmentConfig()
+		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		cfg.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
+	} else {
+		cfg = zap.NewProductionConfig()
+		cfg.EncoderConfig.TimeKey = "ts"
+		cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	}
+
+	if loggerCfg.LoggingEnabled {
+		cfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	} else {
+		cfg.Level = zap.NewAtomicLevelAt(zap.PanicLevel)
+	}
+
+	cfg.OutputPaths = []string{loggerCfg.LogFilePath}
+	cfg.ErrorOutputPaths = []string{loggerCfg.LogFilePath}
+
+	if loggerCfg.Stdout {
+		cfg.OutputPaths = append(cfg.OutputPaths, "stdout")
+		cfg.ErrorOutputPaths = append(cfg.ErrorOutputPaths, "stdout")
+	}
+
 	dir := filepath.Dir(loggerCfg.LogFilePath)
 
 	err := os.MkdirAll(dir, 0755)
@@ -54,21 +85,6 @@ func NewLogger(loggerCfg *LoggerCfg) (*zap.Logger, error) {
 			fmt.Println("Failed to create log file")
 			return nil, err
 		}
-	}
-
-	cfg.EncoderConfig.TimeKey = "ts"
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	cfg.OutputPaths = []string{loggerCfg.LogFilePath}
-	cfg.ErrorOutputPaths = []string{loggerCfg.LogFilePath}
-	if !loggerCfg.LoggingEnabled {
-		cfg.Level = zap.NewAtomicLevelAt(zap.PanicLevel)
-	} else {
-		cfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-	}
-
-	if loggerCfg.Stdout {
-		cfg.OutputPaths = append(cfg.OutputPaths, "stdout")
-		cfg.ErrorOutputPaths = append(cfg.ErrorOutputPaths, "stdout")
 	}
 
 	return cfg.Build()

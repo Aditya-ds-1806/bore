@@ -67,9 +67,10 @@ func main() {
 
 	bc := client.NewBoreClient(&client.BoreClientConfig{
 		UpstreamURL:   flags.UpstreamURL,
-		Traffik:        logger,
+		Traffik:       logger,
 		AllowExternal: flags.allowExternal,
 		DebugMode:     flags.Debug,
+		Version:       AppVersion,
 	})
 
 	wg.Add(1)

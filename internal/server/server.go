@@ -38,6 +38,7 @@ type BoreServer struct {
 type BoreServerCfg struct {
 	Port    int
 	LogFile string
+	Version string
 }
 
 func (bs *BoreServer) generateAppId() string {
@@ -259,7 +260,11 @@ func (bs *BoreServer) StartBoreServer() error {
 }
 
 func NewBoreServer(boreCfg *BoreServerCfg) *BoreServer {
-	cfg := logger.NewLoggerCfg().WithLogFilePath(boreCfg.LogFile)
+	cfg := logger.
+		NewLoggerCfg().
+		WithLogFilePath(boreCfg.LogFile).
+		WithDevMode(strings.Contains(boreCfg.Version, "dev"))
+
 	logger, err := logger.NewLogger(cfg)
 
 	if err != nil {
