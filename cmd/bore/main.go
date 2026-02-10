@@ -2,7 +2,7 @@ package main
 
 import (
 	"bore/internal/client"
-	"bore/internal/client/traffik"
+	"bore/internal/traffik"
 	"bore/internal/ui/tui"
 	"bore/internal/ui/web"
 	"flag"

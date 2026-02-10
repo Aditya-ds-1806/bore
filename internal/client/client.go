@@ -2,7 +2,7 @@ package client
 
 import (
 	borepb "bore/borepb"
-	"bore/internal/client/traffik"
+	"bore/internal/traffik"
 	"context"
 	"fmt"
 	"net/http"

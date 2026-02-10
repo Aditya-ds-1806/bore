@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"bore/internal/client/traffik"
+	"bore/internal/traffik"
 	"encoding/json"
 	"fmt"
 	"sort"
