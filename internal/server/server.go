@@ -2,12 +2,11 @@ package server
 
 import (
 	borepb "bore/borepb"
+	"bore/internal/logger"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -18,7 +17,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -261,29 +259,8 @@ func (bs *BoreServer) StartBoreServer() error {
 }
 
 func NewBoreServer(boreCfg *BoreServerCfg) *BoreServer {
-	cfg := zap.NewProductionConfig()
-	dir := filepath.Dir(boreCfg.LogFile)
-
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		fmt.Println("Failed to create log directory")
-		panic(err)
-	}
-
-	if _, err = os.Stat(boreCfg.LogFile); os.IsNotExist(err) {
-		_, err = os.Create(boreCfg.LogFile)
-		if err != nil {
-			fmt.Println("Failed to create log file")
-			panic(err)
-		}
-	}
-
-	cfg.EncoderConfig.TimeKey = "ts"
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	cfg.OutputPaths = []string{boreCfg.LogFile, "stdout"}
-	cfg.ErrorOutputPaths = []string{boreCfg.LogFile, "stdout"}
-
-	logger, err := cfg.Build()
+	cfg := logger.NewLoggerCfg().WithLogFilePath(boreCfg.LogFile)
+	logger, err := logger.NewLogger(cfg)
 
 	if err != nil {
 		fmt.Println("Failed to initialize logger")

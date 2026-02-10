@@ -2,19 +2,17 @@ package client
 
 import (
 	borepb "bore/borepb"
+	"bore/internal/logger"
 	"bore/internal/traffik"
 	"context"
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"google.golang.org/protobuf/proto"
 	"resty.dev/v3"
 )
@@ -35,7 +33,7 @@ type BoreClient struct {
 	wsMutex       *sync.Mutex
 	debugMode     bool
 	logger        *zap.Logger
-	Traffik        *traffik.Logger
+	Traffik       *traffik.Logger
 	AppId         string
 	AppURL        string
 	UpstreamURL   string
@@ -52,6 +50,16 @@ func (bc *BoreClient) NewWSConnection() error {
 	wsConnStr := fmt.Sprintf("%s://%s/ws", WSScheme, BoreServerHost)
 	bc.logger.Debug("attempting websocket connection", zap.String("url", wsConnStr))
 	conn, res, err := dialer.Dial(wsConnStr, nil)
+
+	conn.SetPingHandler(func(appData string) error {
+		bc.logger.Debug("received ping from server, sending pong", zap.String("appData", appData))
+		return conn.WriteMessage(websocket.PongMessage, []byte(appData))
+	})
+
+	conn.SetCloseHandler(func(code int, text string) error {
+		bc.logger.Warn("websocket connection closed by server", zap.Int("code", code), zap.String("text", text))
+		return conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(code, ""))
+	})
 
 	if err != nil {
 		bc.logger.Error("failed to establish websocket connection", zap.Error(err), zap.String("url", wsConnStr))
@@ -185,34 +193,16 @@ func (bc *BoreClient) RegisterApp() error {
 
 func NewBoreClient(boreClientCfg *BoreClientConfig) *BoreClient {
 	resty := resty.New().SetBaseURL(boreClientCfg.UpstreamURL)
-	cfg := zap.NewProductionConfig()
-	cfg.Level = zap.NewAtomicLevelAt(zap.PanicLevel)
 	logFilePath := "./logs/bore-client.log"
-	dir := filepath.Dir(logFilePath)
 
-	if boreClientCfg.DebugMode {
-		err := os.MkdirAll(dir, 0755)
-		if err != nil {
-			fmt.Println("Failed to create logs directory")
-			panic(err)
-		}
+	cfg := logger.
+		NewLoggerCfg().
+		WithLogFilePath(logFilePath).
+		WithStdout(false).
+		WithLoggingEnabled(boreClientCfg.DebugMode)
 
-		if _, err := os.Stat(logFilePath); os.IsNotExist(err) {
-			_, err = os.Create(logFilePath)
-			if err != nil {
-				fmt.Println("Failed to create log file")
-				panic(err)
-			}
-		}
+	logger, err := logger.NewLogger(cfg)
 
-		cfg.EncoderConfig.TimeKey = "ts"
-		cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-		cfg.OutputPaths = []string{logFilePath}
-		cfg.ErrorOutputPaths = []string{logFilePath}
-		cfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-	}
-
-	logger, err := cfg.Build()
 	if err != nil {
 		fmt.Println("Failed to create logger")
 		panic(err)
@@ -225,7 +215,7 @@ func NewBoreClient(boreClientCfg *BoreClientConfig) *BoreClient {
 		UpstreamURL:   boreClientCfg.UpstreamURL,
 		debugMode:     boreClientCfg.DebugMode,
 		logger:        logger,
-		Traffik:        boreClientCfg.Traffik,
+		Traffik:       boreClientCfg.Traffik,
 		wsMutex:       &sync.Mutex{},
 		Ready:         make(chan struct{}),
 		allowExternal: boreClientCfg.AllowExternal,
