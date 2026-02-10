@@ -2,7 +2,7 @@ package client
 
 import (
 	borepb "bore/borepb"
-	"bore/internal/client/reqlogger"
+	"bore/internal/client/traffik"
 	"context"
 	"fmt"
 	"net/http"
@@ -24,7 +24,7 @@ var WSScheme string
 
 type BoreClientConfig struct {
 	UpstreamURL   string
-	Logger        *reqlogger.Logger
+	Traffik       *traffik.Logger
 	AllowExternal bool
 	DebugMode     bool
 }
@@ -35,7 +35,7 @@ type BoreClient struct {
 	wsMutex       *sync.Mutex
 	debugMode     bool
 	logger        *zap.Logger
-	Logger        *reqlogger.Logger
+	Traffik        *traffik.Logger
 	AppId         string
 	AppURL        string
 	UpstreamURL   string
@@ -102,7 +102,7 @@ func (bc *BoreClient) HandleWSMessages() error {
 
 		cookies, _ := http.ParseCookie(request.Cookies)
 
-		ctx := context.WithValue(context.TODO(), reqlogger.RequestIDKey, request.Id)
+		ctx := context.WithValue(context.TODO(), traffik.RequestIDKey, request.Id)
 
 		req := bc.resty.
 			NewRequest().
@@ -113,7 +113,7 @@ func (bc *BoreClient) HandleWSMessages() error {
 			SetCookies(cookies).
 			SetHeaders(request.Headers)
 
-		bc.Logger.LogRequest(req)
+		bc.Traffik.LogRequest(req)
 
 		res, err := req.Send()
 		if err != nil {
@@ -122,7 +122,7 @@ func (bc *BoreClient) HandleWSMessages() error {
 		}
 
 		bc.logger.Debug("response received", zap.String("reqId", request.Id), zap.Int("statusCode", res.StatusCode()))
-		bc.Logger.LogResponse(res)
+		bc.Traffik.LogResponse(res)
 
 		response := borepb.Response{
 			Id:         request.Id,
@@ -225,7 +225,7 @@ func NewBoreClient(boreClientCfg *BoreClientConfig) *BoreClient {
 		UpstreamURL:   boreClientCfg.UpstreamURL,
 		debugMode:     boreClientCfg.DebugMode,
 		logger:        logger,
-		Logger:        boreClientCfg.Logger,
+		Traffik:        boreClientCfg.Traffik,
 		wsMutex:       &sync.Mutex{},
 		Ready:         make(chan struct{}),
 		allowExternal: boreClientCfg.AllowExternal,

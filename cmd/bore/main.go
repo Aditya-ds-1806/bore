@@ -2,7 +2,7 @@ package main
 
 import (
 	"bore/internal/client"
-	"bore/internal/client/reqlogger"
+	"bore/internal/client/traffik"
 	"bore/internal/ui/tui"
 	"bore/internal/ui/web"
 	"flag"
@@ -63,11 +63,11 @@ func main() {
 	defer wg.Wait()
 
 	flags := ParseFlags()
-	logger := reqlogger.NewLogger()
+	logger := traffik.NewLogger()
 
 	bc := client.NewBoreClient(&client.BoreClientConfig{
 		UpstreamURL:   flags.UpstreamURL,
-		Logger:        logger,
+		Traffik:        logger,
 		AllowExternal: flags.allowExternal,
 		DebugMode:     flags.Debug,
 	})
