@@ -63,11 +63,11 @@ func main() {
 	defer wg.Wait()
 
 	flags := ParseFlags()
-	logger := traffik.NewLogger()
+	traffik := traffik.NewLogger()
 
 	bc := client.NewBoreClient(&client.BoreClientConfig{
 		UpstreamURL:   flags.UpstreamURL,
-		Traffik:       logger,
+		Traffik:       traffik,
 		AllowExternal: flags.allowExternal,
 		DebugMode:     flags.Debug,
 		Version:       AppVersion,
@@ -89,7 +89,7 @@ func main() {
 	portCh := make(chan int, 1)
 
 	ws := web.WebServer{
-		Logger: logger,
+		Traffik: traffik,
 		Port:   flags.InspectPort,
 		PortCh: portCh,
 	}
@@ -107,7 +107,7 @@ func main() {
 		}()
 	}
 
-	p := tea.NewProgram(tui.NewModel(logger, bc.AppURL, portCh), tea.WithAltScreen())
+	p := tea.NewProgram(tui.NewModel(traffik, bc.AppURL, portCh), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("failed to run TUI: %v", err)
 		os.Exit(1)

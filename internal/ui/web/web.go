@@ -14,9 +14,9 @@ import (
 const maxRetries int = 10
 
 type WebServer struct {
-	Logger *traffik.Logger
-	Port   int
-	PortCh chan<- int
+	Traffik *traffik.Logger
+	Port    int
+	PortCh  chan<- int
 }
 
 func (ws *WebServer) StartServer() error {
@@ -29,7 +29,7 @@ func (ws *WebServer) StartServer() error {
 
 		filterQuery := r.URL.Query().Get("filter")
 
-		logs, err := ws.Logger.GetFilteredLogs(filterQuery)
+		logs, err := ws.Traffik.GetFilteredLogs(filterQuery)
 		if err != nil {
 			err := json.NewEncoder(w).Encode(map[string]any{
 				"error": err.Error(),
@@ -85,7 +85,7 @@ func (ws *WebServer) StartServer() error {
 			return
 		}
 
-		log := ws.Logger.GetLogByID(requestID)
+		log := ws.Traffik.GetLogByID(requestID)
 		if log == nil {
 			w.WriteHeader(http.StatusNotFound)
 			err := json.NewEncoder(w).Encode(map[string]any{
