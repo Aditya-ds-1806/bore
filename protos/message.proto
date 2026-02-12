@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "request.proto";
+import "response.proto";
+
+package borepb;
+option go_package = ".";
+
+
+message Message {
+    oneof payload {
+        Request request = 2;
+        Response response = 3;
+    }  
+}

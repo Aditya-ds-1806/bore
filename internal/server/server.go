@@ -65,9 +65,9 @@ func (bs *BoreServer) handleApp(appId string) {
 	go bs.ping(&app)
 
 	for {
-		response := &borepb.Response{}
+		var message borepb.Message
 
-		_, res, err := app.wsConn.ReadMessage()
+		_, mes, err := app.wsConn.ReadMessage()
 
 		if websocket.IsUnexpectedCloseError(err) {
 			bs.logger.Info("ws conn closed unexpectedly", zap.Error(err))
@@ -79,13 +79,17 @@ func (bs *BoreServer) handleApp(appId string) {
 			return
 		}
 
-		err = proto.Unmarshal(res, response)
+		err = proto.Unmarshal(mes, &message)
 		if err != nil {
 			bs.logger.Error("Failed to unmarshal response", zap.Error(err))
 			return
 		}
 
-		bs.reqIdChanMap[response.Id] <- response
+		switch msg := message.Payload.(type) {
+		case *borepb.Message_Response:
+			bs.reqIdChanMap[msg.Response.Id] <- msg.Response
+		}
+
 	}
 }
 
@@ -204,7 +208,7 @@ func (bs *BoreServer) StartBoreServer() error {
 
 		reqLogger.Debug("finished parsing headers", zap.Any("headers", headersParsed))
 
-		req := &borepb.Request{
+		request := borepb.Request{
 			Id:        requestId,
 			Method:    r.Method,
 			Path:      r.RequestURI,
@@ -214,7 +218,11 @@ func (bs *BoreServer) StartBoreServer() error {
 			Timestamp: time.Now().UnixMilli(),
 		}
 
-		reqBytes, err := proto.Marshal(req)
+		message := borepb.Message{
+			Payload: &borepb.Message_Request{Request: &request},
+		}
+
+		reqBytes, err := proto.Marshal(&message)
 		if err != nil {
 			reqLogger.Error("failed to marshal request", zap.Error(err))
 			return
