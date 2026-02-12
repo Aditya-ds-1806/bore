@@ -92,11 +92,11 @@ type isMessage_Payload interface {
 }
 
 type Message_Request struct {
-	Request *Request `protobuf:"bytes,1,opt,name=request,proto3,oneof"`
+	Request *Request `protobuf:"bytes,2,opt,name=request,proto3,oneof"`
 }
 
 type Message_Response struct {
-	Response *Response `protobuf:"bytes,2,opt,name=response,proto3,oneof"`
+	Response *Response `protobuf:"bytes,3,opt,name=response,proto3,oneof"`
 }
 
 func (*Message_Request) isMessage_Payload() {}
@@ -109,8 +109,8 @@ const file_message_proto_rawDesc = "" +
 	"\n" +
 	"\rmessage.proto\x12\x06borepb\x1a\rrequest.proto\x1a\x0eresponse.proto\"q\n" +
 	"\aMessage\x12+\n" +
-	"\arequest\x18\x01 \x01(\v2\x0f.borepb.RequestH\x00R\arequest\x12.\n" +
-	"\bresponse\x18\x02 \x01(\v2\x10.borepb.ResponseH\x00R\bresponseB\t\n" +
+	"\arequest\x18\x02 \x01(\v2\x0f.borepb.RequestH\x00R\arequest\x12.\n" +
+	"\bresponse\x18\x03 \x01(\v2\x10.borepb.ResponseH\x00R\bresponseB\t\n" +
 	"\apayloadB\x03Z\x01.b\x06proto3"
 
 var (
