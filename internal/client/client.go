@@ -26,6 +26,7 @@ type BoreClientConfig struct {
 	AllowExternal bool
 	DebugMode     bool
 	Version       string
+	NoTui         bool
 }
 
 type BoreClient struct {
@@ -199,7 +200,7 @@ func NewBoreClient(boreClientCfg *BoreClientConfig) *BoreClient {
 	cfg := logger.
 		NewLoggerCfg().
 		WithLogFilePath(logFilePath).
-		WithStdout(false).
+		WithStdout(boreClientCfg.NoTui).
 		WithLoggingEnabled(boreClientCfg.DebugMode).
 		WithDevMode(strings.Contains(boreClientCfg.Version, "dev"))
 

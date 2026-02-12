@@ -21,6 +21,7 @@ type Flags struct {
 	Debug         bool
 	InspectPort   int
 	allowExternal bool
+	NoTui         bool
 }
 
 func ParseFlags() Flags {
@@ -36,6 +37,7 @@ func ParseFlags() Flags {
 	inspectPort := flag.Int("inspect-port", 8000, "Port to run the web inspector")
 	inspect := flag.Bool("inspect", true, "Enable the web inspector")
 	allowExternal := flag.Bool("allow-external", false, "Allow proxying non-localhost targets (disabled by default)")
+	noTui := flag.Bool("no-tui", false, "Disable the terminal user interface")
 
 	flag.Parse()
 
@@ -55,6 +57,7 @@ func ParseFlags() Flags {
 		Inspect:       *inspect,
 		allowExternal: *allowExternal,
 		Debug:         *debug,
+		NoTui:         *noTui,
 	}
 }
 
@@ -71,6 +74,7 @@ func main() {
 		AllowExternal: flags.allowExternal,
 		DebugMode:     flags.Debug,
 		Version:       AppVersion,
+		NoTui:         flags.NoTui,
 	})
 
 	wg.Add(1)
@@ -90,8 +94,8 @@ func main() {
 
 	ws := web.WebServer{
 		Traffik: traffik,
-		Port:   flags.InspectPort,
-		PortCh: portCh,
+		Port:    flags.InspectPort,
+		PortCh:  portCh,
 	}
 
 	if flags.Inspect {
@@ -107,9 +111,12 @@ func main() {
 		}()
 	}
 
-	p := tea.NewProgram(tui.NewModel(traffik, bc.AppURL, portCh), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		fmt.Printf("failed to run TUI: %v", err)
-		os.Exit(1)
+	if !flags.NoTui {
+		p := tea.NewProgram(tui.NewModel(traffik, bc.AppURL, portCh), tea.WithAltScreen())
+		if _, err := p.Run(); err != nil {
+			fmt.Printf("failed to run TUI: %v", err)
+			os.Exit(1)
+		}
 	}
+
 }
