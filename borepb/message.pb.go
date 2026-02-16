@@ -22,11 +22,13 @@ const (
 )
 
 type Message struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	MessageId string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*Message_Request
 	//	*Message_Response
+	//	*Message_Socket
 	Payload       isMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -62,6 +64,13 @@ func (*Message) Descriptor() ([]byte, []int) {
 	return file_message_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *Message) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
 func (x *Message) GetPayload() isMessage_Payload {
 	if x != nil {
 		return x.Payload
@@ -87,6 +96,15 @@ func (x *Message) GetResponse() *Response {
 	return nil
 }
 
+func (x *Message) GetSocket() *Socket {
+	if x != nil {
+		if x, ok := x.Payload.(*Message_Socket); ok {
+			return x.Socket
+		}
+	}
+	return nil
+}
+
 type isMessage_Payload interface {
 	isMessage_Payload()
 }
@@ -99,18 +117,27 @@ type Message_Response struct {
 	Response *Response `protobuf:"bytes,3,opt,name=response,proto3,oneof"`
 }
 
+type Message_Socket struct {
+	Socket *Socket `protobuf:"bytes,4,opt,name=socket,proto3,oneof"`
+}
+
 func (*Message_Request) isMessage_Payload() {}
 
 func (*Message_Response) isMessage_Payload() {}
+
+func (*Message_Socket) isMessage_Payload() {}
 
 var File_message_proto protoreflect.FileDescriptor
 
 const file_message_proto_rawDesc = "" +
 	"\n" +
-	"\rmessage.proto\x12\x06borepb\x1a\rrequest.proto\x1a\x0eresponse.proto\"q\n" +
-	"\aMessage\x12+\n" +
+	"\rmessage.proto\x12\x06borepb\x1a\rrequest.proto\x1a\x0eresponse.proto\x1a\fsocket.proto\"\xba\x01\n" +
+	"\aMessage\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12+\n" +
 	"\arequest\x18\x02 \x01(\v2\x0f.borepb.RequestH\x00R\arequest\x12.\n" +
-	"\bresponse\x18\x03 \x01(\v2\x10.borepb.ResponseH\x00R\bresponseB\t\n" +
+	"\bresponse\x18\x03 \x01(\v2\x10.borepb.ResponseH\x00R\bresponse\x12(\n" +
+	"\x06socket\x18\x04 \x01(\v2\x0e.borepb.SocketH\x00R\x06socketB\t\n" +
 	"\apayloadB\x03Z\x01.b\x06proto3"
 
 var (
@@ -130,15 +157,17 @@ var file_message_proto_goTypes = []any{
 	(*Message)(nil),  // 0: borepb.Message
 	(*Request)(nil),  // 1: borepb.Request
 	(*Response)(nil), // 2: borepb.Response
+	(*Socket)(nil),   // 3: borepb.Socket
 }
 var file_message_proto_depIdxs = []int32{
 	1, // 0: borepb.Message.request:type_name -> borepb.Request
 	2, // 1: borepb.Message.response:type_name -> borepb.Response
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 2: borepb.Message.socket:type_name -> borepb.Socket
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_message_proto_init() }
@@ -148,9 +177,11 @@ func file_message_proto_init() {
 	}
 	file_request_proto_init()
 	file_response_proto_init()
+	file_socket_proto_init()
 	file_message_proto_msgTypes[0].OneofWrappers = []any{
 		(*Message_Request)(nil),
 		(*Message_Response)(nil),
+		(*Message_Socket)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

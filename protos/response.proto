@@ -4,10 +4,9 @@ package borepb;
 option go_package = ".";
 
 message Response {
-    string id = 1;
-    int32 status_code = 2;
-    map<string, string> headers = 3;
-    bytes body = 4;
-    int64 timestamp = 5;
-    string cookies = 6;
+    int32 status_code = 1;
+    map<string, string> headers = 2;
+    bytes body = 3;
+    int64 timestamp = 4;
+    string cookies = 5;
 }
