@@ -3,13 +3,13 @@ package server
 import (
 	borepb "bore/borepb"
 	"bore/internal/logger"
+	"bore/internal/server/app"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	haikunator "github.com/atrox/haikunatorgo/v2"
@@ -17,22 +17,17 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/proto"
 )
 
 const maxRetries int = 10
 
-type App struct {
-	wsConn  *websocket.Conn
-	wsMutex *sync.Mutex
-}
-
 type BoreServer struct {
-	logger       *zap.Logger
-	reqIdChanMap map[string]chan *borepb.Response
-	apps         map[string]App
-	haikunator   *haikunator.Haikunator
-	port         int
+	logger               *zap.Logger
+	reqIdResponseMap     map[string]chan *borepb.Response
+	appRegistry          *app.AppRegistry
+	haikunator           *haikunator.Haikunator
+	port                 int
+	messageSubscriptions map[string]chan *borepb.Message
 }
 
 type BoreServerCfg struct {
@@ -45,76 +40,10 @@ func (bs *BoreServer) generateAppId() string {
 	return bs.haikunator.Haikunate()
 }
 
-func (bs *BoreServer) handleApp(appId string) {
-	defer func() {
-		delete(bs.apps, appId)
-		bs.logger.Info("cleaned up resources for app", zap.String("app_id", appId))
-	}()
-
-	app, ok := bs.apps[appId]
-	if !ok {
-		bs.logger.Error("No App found!")
-		return
-	}
-
-	if app.wsConn == nil {
-		bs.logger.Info("no wsConn for app", zap.String("app_id", appId))
-		return
-	}
-
-	go bs.ping(&app)
-
-	for {
-		var message borepb.Message
-
-		_, mes, err := app.wsConn.ReadMessage()
-
-		if websocket.IsUnexpectedCloseError(err) {
-			bs.logger.Info("ws conn closed unexpectedly", zap.Error(err))
-			return
-		}
-
-		if err != nil {
-			bs.logger.Error("failed to read response from bore client", zap.Error(err))
-			return
-		}
-
-		err = proto.Unmarshal(mes, &message)
-		if err != nil {
-			bs.logger.Error("Failed to unmarshal response", zap.Error(err))
-			return
-		}
-
-		switch msg := message.Payload.(type) {
-		case *borepb.Message_Response:
-			bs.reqIdChanMap[msg.Response.Id] <- msg.Response
-		}
-
-	}
-}
-
-func (bs *BoreServer) ping(app *App) {
-	pingInterval := time.Duration(10 * time.Second)
-	ticker := time.NewTicker(pingInterval)
-
-	defer ticker.Stop()
-
-	for range ticker.C {
-		app.wsMutex.Lock()
-		err := app.wsConn.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second))
-		app.wsMutex.Unlock()
-
-		if err != nil {
-			bs.logger.Error("failed to send ping!", zap.Error(err))
-			return
-		}
-	}
-}
-
 func (bs *BoreServer) StartBoreServer() error {
 	router := chi.NewRouter()
 
-	router.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
+	router.Get("/register", func(w http.ResponseWriter, r *http.Request) {
 		clientIP := r.Header.Get("X-Real-IP")
 		bs.logger.Info("new bore client connection request", zap.String("client_ip", clientIP))
 
@@ -137,41 +66,55 @@ func (bs *BoreServer) StartBoreServer() error {
 
 		bs.logger.Info("connection upgraded to WS", zap.String("client_ip", clientIP))
 
-		bs.apps[appId] = App{
-			wsConn:  conn,
-			wsMutex: &sync.Mutex{},
+		appCfg := app.AppConfig{
+			AppId:            appId,
+			DownstreamWSConn: conn,
+			Logger:           bs.logger.With(zap.String("app_id", appId)),
 		}
-		bs.logger.Info("registered app!", zap.String("app_id", appId))
 
-		go bs.handleApp(appId)
+		app, err := app.NewApp(appCfg)
+		if err != nil {
+			bs.logger.Error("failed to register app", zap.Error(err), zap.String("app_id", appId))
+			http.Error(w, "Failed to register app", http.StatusInternalServerError)
+			return
+		}
+
+		go func() {
+			for msg := range app.ReadMessagesFromDownstream() {
+				msgId := msg.GetMessageId()
+				if subChan, ok := bs.messageSubscriptions[msgId]; ok {
+					subChan <- msg
+					close(subChan)
+				}
+			}
+		}()
+
+		bs.logger.Info("registered app!", zap.String("app_id", appId))
 	})
 
 	router.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
-		requestId := uuid.New().String()
+		messageId := uuid.New().String()
 		appId := strings.Split(r.Host, ".")[0]
 		clientIP := r.Header.Get("X-Real-IP")
 
 		defer func() {
-			delete(bs.reqIdChanMap, requestId)
-			bs.logger.Info("cleaned up resources for request", zap.String("req_id", requestId))
+			delete(bs.messageSubscriptions, messageId)
 		}()
 
 		reqLogger := bs.logger.With(
-			zap.String("req_id", requestId),
+			zap.String("req_id", messageId),
 			zap.String("client_ip", clientIP),
 			zap.String("app_id", appId),
 		)
 
 		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path))
 
-		app, ok := bs.apps[appId]
+		app, ok := app.GetApp(appId)
 		if !ok {
 			reqLogger.Error("No app found!")
 			http.Error(w, "No app found!", http.StatusBadRequest)
 			return
 		}
-
-		bs.reqIdChanMap[requestId] = make(chan *borepb.Response)
 
 		hopByHopHeaders := []string{
 			"Connection",
@@ -209,7 +152,6 @@ func (bs *BoreServer) StartBoreServer() error {
 		reqLogger.Debug("finished parsing headers", zap.Any("headers", headersParsed))
 
 		request := borepb.Request{
-			Id:        requestId,
 			Method:    r.Method,
 			Path:      r.RequestURI,
 			Body:      bodyBytes,
@@ -219,24 +161,16 @@ func (bs *BoreServer) StartBoreServer() error {
 		}
 
 		message := borepb.Message{
-			Payload: &borepb.Message_Request{Request: &request},
+			MessageId: messageId,
+			Payload:   &borepb.Message_Request{Request: &request},
 		}
 
-		reqBytes, err := proto.Marshal(&message)
-		if err != nil {
-			reqLogger.Error("failed to marshal request", zap.Error(err))
-			return
-		}
+		subCh := make(chan *borepb.Message, 1)
+		bs.messageSubscriptions[messageId] = subCh
+		app.WriteMessageToDownStream(&message)
+		res := <-subCh
 
-		app.wsMutex.Lock()
-		err = app.wsConn.WriteMessage(websocket.BinaryMessage, reqBytes)
-		app.wsMutex.Unlock()
-		if err != nil {
-			reqLogger.Error("failed to write reqBytes to ws", zap.Error(err))
-			return
-		}
-
-		response := <-bs.reqIdChanMap[requestId]
+		response := res.GetResponse()
 		reqLogger.Info("received response", zap.Int32("status_code", response.StatusCode), zap.Any("headers", response.Headers))
 
 		for headerName, headerValues := range response.Headers {
@@ -285,10 +219,11 @@ func NewBoreServer(boreCfg *BoreServerCfg) *BoreServer {
 	h.TokenChars = "abcdefghijklmnopqrstuvwxyz0123456789"
 
 	return &BoreServer{
-		reqIdChanMap: make(map[string]chan *borepb.Response),
-		apps:         make(map[string]App),
-		haikunator:   h,
-		logger:       logger,
-		port:         boreCfg.Port,
+		reqIdResponseMap:     make(map[string]chan *borepb.Response),
+		appRegistry:          app.Registry,
+		haikunator:           h,
+		logger:               logger,
+		port:                 boreCfg.Port,
+		messageSubscriptions: make(map[string]chan *borepb.Message),
 	}
 }
