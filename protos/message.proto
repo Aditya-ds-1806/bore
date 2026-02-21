@@ -14,5 +14,5 @@ message Message {
         Request request = 2;
         Response response = 3;
         Socket socket = 4;
-    }  
+    }
 }

@@ -1,7 +1,8 @@
-package app
+package appregistry
 
 import (
 	borepb "bore/borepb"
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -23,15 +24,21 @@ type App struct {
 	WsMutex            *sync.RWMutex        // Mutex to synchronize writes to WS conn
 	fromUpstreamChan   chan *borepb.Message // Channel to receive messages from upstream (nginx)
 	fromDownstreamChan chan *borepb.Message // Channel to receive messages from downstream (bore client)
-	errCh              chan error           // Channel to receive errors from goroutines
 	logger             *zap.Logger
+	appRegistry        *AppRegistry
+	shutdownCtx        context.Context
+	shutdown           context.CancelFunc
+	once               sync.Once
 }
 
-func (app *App) handleMessagesFromUpstream() error {
+func (app *App) handleMessagesFromUpstream() <-chan error {
+	errCh := make(chan error, 1)
+
 	for message := range app.fromUpstreamChan {
 		mes, err := proto.Marshal(message)
 		if err != nil {
-			return err
+			errCh <- fmt.Errorf("error marshalling message: %w", err)
+			return errCh
 		}
 
 		switch message.Payload.(type) {
@@ -40,7 +47,8 @@ func (app *App) handleMessagesFromUpstream() error {
 			err = app.WsConn.WriteMessage(websocket.BinaryMessage, mes)
 			app.WsMutex.Unlock()
 			if err != nil {
-				return err
+				errCh <- fmt.Errorf("error writing message to downstream WS connection: %w", err)
+				return errCh
 			}
 		}
 	}
@@ -50,30 +58,31 @@ func (app *App) handleMessagesFromUpstream() error {
 	return nil
 }
 
-func (app *App) handleMessagesFromDownstream() error {
+func (app *App) handleMessagesFromDownstream() <-chan error {
+	errCh := make(chan error, 1)
+
 	for {
 		var message borepb.Message
 
 		_, mes, err := app.WsConn.ReadMessage()
 		if err != nil {
-			return err
+			errCh <- fmt.Errorf("error reading message from downstream WS connection: %w", err)
+			return errCh
 		}
 
 		err = proto.Unmarshal(mes, &message)
 		if err != nil {
-			return err
+			errCh <- fmt.Errorf("error unmarshalling message from downstream WS connection: %w", err)
+			return errCh
 		}
 
-		select {
-		case app.fromDownstreamChan <- &message:
-		default:
-			err := fmt.Errorf("timeout sending message to fromDownstreamChan")
-			fmt.Println(err)
-		}
+		app.fromDownstreamChan <- &message
 	}
 }
 
-func (app *App) keepDownstreamAlive() error {
+func (app *App) keepDownstreamAlive() <-chan error {
+	errCh := make(chan error, 1)
+
 	pingInterval := time.Duration(10 * time.Second)
 	ticker := time.NewTicker(pingInterval)
 
@@ -85,19 +94,15 @@ func (app *App) keepDownstreamAlive() error {
 		app.WsMutex.Unlock()
 
 		if err != nil {
-			return err
+			errCh <- fmt.Errorf("error sending ping message: %w", err)
+			return errCh
 		}
 	}
 
-	return nil
+	return errCh
 }
 
 func (app *App) WriteMessageToDownStream(message *borepb.Message) {
-	if app.fromUpstreamChan == nil {
-		app.errCh <- fmt.Errorf("upstream channel is nil")
-		return
-	}
-
 	app.fromUpstreamChan <- message
 }
 
@@ -105,26 +110,35 @@ func (app *App) ReadMessagesFromDownstream() <-chan *borepb.Message {
 	return app.fromDownstreamChan
 }
 
-func (app *App) destroy() {
-	app.WsMutex.Lock()
-	defer app.WsMutex.Unlock()
-
-	close(app.errCh)
-	close(app.fromUpstreamChan)
-	close(app.fromDownstreamChan)
-
-	app.errCh = nil
-	app.fromUpstreamChan = nil
-	app.fromDownstreamChan = nil
-
-	if app.WsConn != nil {
-		app.WsConn.Close()
-	}
-
-	DeleteApp(app.AppId)
+func (app *App) Done() <-chan struct{} {
+	return app.shutdownCtx.Done()
 }
 
-func NewApp(appCfg AppConfig) (*App, error) {
+func (app *App) Destroy() {
+	app.once.Do(func() {
+		app.WsMutex.Lock()
+		defer app.WsMutex.Unlock()
+
+		app.shutdown()
+
+		close(app.fromUpstreamChan)
+		close(app.fromDownstreamChan)
+
+		app.fromUpstreamChan = nil
+		app.fromDownstreamChan = nil
+
+		if app.WsConn != nil {
+			app.WsConn.Close()
+		}
+
+		app.appRegistry.DeleteApp(app.AppId)
+	})
+}
+
+func newApp(appCfg AppConfig) (*App, error) {
+	appRegistry := NewAppRegistry()
+	shutdownCtx, shutdown := context.WithCancel(context.Background())
+
 	app := App{
 		AppId:              appCfg.AppId,
 		WsConn:             appCfg.DownstreamWSConn,
@@ -132,31 +146,44 @@ func NewApp(appCfg AppConfig) (*App, error) {
 		logger:             appCfg.Logger,
 		fromUpstreamChan:   make(chan *borepb.Message, 10),
 		fromDownstreamChan: make(chan *borepb.Message, 10),
-		errCh:              make(chan error, 1),
+		appRegistry:        appRegistry,
+		shutdownCtx:        shutdownCtx,
+		shutdown:           shutdown,
 	}
 
-	err := addApp(&app)
+	err := appRegistry.addApp(&app)
 	if err != nil {
 		return nil, err
 	}
 
 	go func() {
-		if err := <-app.errCh; err != nil {
-			app.logger.Error("error in app goroutine", zap.Error(err))
-			app.destroy()
+		select {
+		case err := <-app.keepDownstreamAlive():
+			app.logger.Error("error in keepDownstreamAlive goroutine", zap.Error(err))
+			app.Destroy()
+		case <-app.shutdownCtx.Done():
+			app.logger.Error("shutdown signal received, stopping keepDownstreamAlive goroutine")
 		}
 	}()
 
 	go func() {
-		app.errCh <- app.keepDownstreamAlive()
+		select {
+		case err := <-app.handleMessagesFromDownstream():
+			app.logger.Error("error in handleMessagesFromDownstream goroutine", zap.Error(err))
+			app.Destroy()
+		case <-app.shutdownCtx.Done():
+			app.logger.Error("shutdown signal received, stopping handleMessagesFromDownstream goroutine")
+		}
 	}()
 
 	go func() {
-		app.errCh <- app.handleMessagesFromDownstream()
-	}()
-
-	go func() {
-		app.errCh <- app.handleMessagesFromUpstream()
+		select {
+		case err := <-app.handleMessagesFromUpstream():
+			app.logger.Error("error in handleMessagesFromUpstream goroutine", zap.Error(err))
+			app.Destroy()
+		case <-app.shutdownCtx.Done():
+			app.logger.Error("shutdown signal received, stopping handleMessagesFromUpstream goroutine")
+		}
 	}()
 
 	return &app, nil

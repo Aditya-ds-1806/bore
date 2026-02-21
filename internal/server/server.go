@@ -3,16 +3,16 @@ package server
 import (
 	borepb "bore/borepb"
 	"bore/internal/logger"
-	"bore/internal/server/app"
+	appregistry "bore/internal/server/app"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
-	haikunator "github.com/atrox/haikunatorgo/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -23,11 +23,10 @@ const maxRetries int = 10
 
 type BoreServer struct {
 	logger               *zap.Logger
-	reqIdResponseMap     map[string]chan *borepb.Response
-	appRegistry          *app.AppRegistry
-	haikunator           *haikunator.Haikunator
 	port                 int
+	mu                   sync.Mutex
 	messageSubscriptions map[string]chan *borepb.Message
+	appRegistry          *appregistry.AppRegistry
 }
 
 type BoreServerCfg struct {
@@ -36,8 +35,58 @@ type BoreServerCfg struct {
 	Version string
 }
 
-func (bs *BoreServer) generateAppId() string {
-	return bs.haikunator.Haikunate()
+func (bs *BoreServer) newSubCh(messageId string) chan *borepb.Message {
+	ch := make(chan *borepb.Message, 1)
+	bs.mu.Lock()
+	bs.messageSubscriptions[messageId] = ch
+	bs.mu.Unlock()
+
+	return ch
+}
+
+func (bs *BoreServer) GetSubCh(messageId string) (chan *borepb.Message, bool) {
+	bs.mu.Lock()
+	ch, ok := bs.messageSubscriptions[messageId]
+	bs.mu.Unlock()
+
+	return ch, ok
+}
+
+func (bs *BoreServer) RegisterApp(appId string, conn *websocket.Conn) (*appregistry.App, error) {
+	logger := bs.logger.With(zap.String("app_id", appId))
+
+	appCfg := appregistry.AppConfig{
+		AppId:            appId,
+		Logger:           logger,
+		DownstreamWSConn: conn,
+	}
+
+	app, err := bs.appRegistry.NewApp(appCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		for {
+			select {
+			case msg := <-app.ReadMessagesFromDownstream():
+				msgId := msg.GetMessageId()
+				if subChan, ok := bs.GetSubCh(msgId); ok {
+					subChan <- msg
+					close(subChan)
+				} else {
+					logger.Warn("no subscription channel found for message", zap.String("message_id", msgId))
+				}
+			case <-app.Done():
+				logger.Info("app shutdown signal received, stopping ReadMessagesFromDownstream goroutine")
+				return
+			}
+		}
+	}()
+
+	logger.Info("registered app!", zap.String("app_id", appId))
+
+	return app, nil
 }
 
 func (bs *BoreServer) StartBoreServer() error {
@@ -52,7 +101,7 @@ func (bs *BoreServer) StartBoreServer() error {
 			WriteBufferSize: 1024,
 		}
 
-		appId := bs.generateAppId()
+		appId := bs.appRegistry.NewAppId()
 
 		conn, err := upgrader.Upgrade(w, r, http.Header{
 			"X-Bore-App-ID": {appId},
@@ -66,30 +115,11 @@ func (bs *BoreServer) StartBoreServer() error {
 
 		bs.logger.Info("connection upgraded to WS", zap.String("client_ip", clientIP))
 
-		appCfg := app.AppConfig{
-			AppId:            appId,
-			DownstreamWSConn: conn,
-			Logger:           bs.logger.With(zap.String("app_id", appId)),
-		}
-
-		app, err := app.NewApp(appCfg)
-		if err != nil {
+		if _, err = bs.RegisterApp(appId, conn); err != nil {
 			bs.logger.Error("failed to register app", zap.Error(err), zap.String("app_id", appId))
 			http.Error(w, "Failed to register app", http.StatusInternalServerError)
 			return
 		}
-
-		go func() {
-			for msg := range app.ReadMessagesFromDownstream() {
-				msgId := msg.GetMessageId()
-				if subChan, ok := bs.messageSubscriptions[msgId]; ok {
-					subChan <- msg
-					close(subChan)
-				}
-			}
-		}()
-
-		bs.logger.Info("registered app!", zap.String("app_id", appId))
 	})
 
 	router.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +139,7 @@ func (bs *BoreServer) StartBoreServer() error {
 
 		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path))
 
-		app, ok := app.GetApp(appId)
+		app, ok := bs.appRegistry.GetApp(appId)
 		if !ok {
 			reqLogger.Error("No app found!")
 			http.Error(w, "No app found!", http.StatusBadRequest)
@@ -165,8 +195,8 @@ func (bs *BoreServer) StartBoreServer() error {
 			Payload:   &borepb.Message_Request{Request: &request},
 		}
 
-		subCh := make(chan *borepb.Message, 1)
-		bs.messageSubscriptions[messageId] = subCh
+		subCh := bs.newSubCh(messageId)
+
 		app.WriteMessageToDownStream(&message)
 		res := <-subCh
 
@@ -214,16 +244,11 @@ func NewBoreServer(boreCfg *BoreServerCfg) *BoreServer {
 		panic(err)
 	}
 
-	h := haikunator.New()
-	h.TokenLength = 5
-	h.TokenChars = "abcdefghijklmnopqrstuvwxyz0123456789"
-
 	return &BoreServer{
-		reqIdResponseMap:     make(map[string]chan *borepb.Response),
-		appRegistry:          app.Registry,
-		haikunator:           h,
 		logger:               logger,
 		port:                 boreCfg.Port,
+		mu:                   sync.Mutex{},
 		messageSubscriptions: make(map[string]chan *borepb.Message),
+		appRegistry:          appregistry.NewAppRegistry(),
 	}
 }

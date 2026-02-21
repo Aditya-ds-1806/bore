@@ -143,14 +143,14 @@ func (bc *BoreClient) HandleWSMessages() error {
 				response.Headers[headerName] = strings.Join(headerValues, ",")
 			}
 
-			message := borepb.Message{
+			responseMessage := borepb.Message{
 				MessageId: message.MessageId,
 				Payload:   &borepb.Message_Response{Response: &response},
 			}
 
-			resBytes, err := proto.Marshal(&message)
+			resBytes, err := proto.Marshal(&responseMessage)
 			if err != nil {
-				bc.logger.Error("failed to marshal response", zap.String("reqId", message.MessageId), zap.Error(err))
+				bc.logger.Error("failed to marshal response", zap.String("reqId", responseMessage.MessageId), zap.Error(err))
 				return err
 			}
 
@@ -158,11 +158,11 @@ func (bc *BoreClient) HandleWSMessages() error {
 			err = bc.wsConn.WriteMessage(websocket.BinaryMessage, resBytes)
 			bc.wsMutex.Unlock()
 			if err != nil {
-				bc.logger.Error("failed to write response to websocket", zap.String("reqId", message.MessageId), zap.Error(err))
+				bc.logger.Error("failed to write response to websocket", zap.String("reqId", responseMessage.MessageId), zap.Error(err))
 				return err
 			}
 
-			bc.logger.Debug("response sent", zap.String("reqId", message.MessageId))
+			bc.logger.Debug("response sent", zap.String("reqId", responseMessage.MessageId))
 		}
 
 	}
