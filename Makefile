@@ -22,4 +22,4 @@ build-server:
 protos:
 	rm -rf borepb
 	mkdir -p borepb
-	protoc --go_out=./borepb protos/*.proto
+	protoc --go_out=./borepb protos/*.proto -I protos

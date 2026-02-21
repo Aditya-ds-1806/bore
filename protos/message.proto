@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+import "request.proto";
+import "response.proto";
+import "socket.proto";
+
+package borepb;
+option go_package = ".";
+
+
+message Message {
+    string message_id = 1;
+    oneof payload {
+        Request request = 2;
+        Response response = 3;
+        Socket socket = 4;
+    }
+}
