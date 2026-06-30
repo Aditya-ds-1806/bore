@@ -9,15 +9,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Aditya-ds-1806/bore/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/Aditya-ds-1806/bore" alt="License">
-  </a>
-  <a href="https://github.com/Aditya-ds-1806/bore/releases">
-    <img src="https://img.shields.io/github/v/release/Aditya-ds-1806/bore" alt="Release">
-  </a>
-  <a href="https://github.com/Aditya-ds-1806/bore/stargazers">
-    <img src="https://img.shields.io/github/stars/Aditya-ds-1806/bore" alt="Stars">
-  </a>
+    <img src="https://img.shields.io/github/license/Aditya-ds-1806/bore?style=flat-square" alt="License">
+    <img src="https://img.shields.io/github/v/release/Aditya-ds-1806/bore?style=flat-square" alt="Release">
+    <img src="https://img.shields.io/github/stars/Aditya-ds-1806/bore?style=flat-square&logo=github&logoColor=%23181717" alt="Stars">
+    <img src="https://img.shields.io/github/downloads/aditya-ds-1806/bore/total?style=flat-square&logo=github&logoColor=%23181717" alt="GitHub Downloads">
+    <img src="https://img.shields.io/npm/d18m/bore-cli?style=flat-square&logo=npm&logoColor=%23CB3837" alt="Npm downloads">
 </p>
 
 <p align="center">
