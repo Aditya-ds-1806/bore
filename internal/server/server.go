@@ -36,7 +36,10 @@ func (bs *BoreServer) generateAppId() string {
 }
 
 func (bs *BoreServer) handleApp(appId string) {
-	defer func() { delete(bs.apps, appId) }()
+	defer func() {
+		delete(bs.apps, appId)
+		bs.logger.Info("cleaned up resources for app", zap.String("app_id", appId))
+	}()
 
 	app, ok := bs.apps[appId]
 	if !ok {
@@ -45,7 +48,7 @@ func (bs *BoreServer) handleApp(appId string) {
 	}
 
 	if app.wsConn == nil {
-		bs.logger.Info("no wsConn for app", zap.String("appId", appId))
+		bs.logger.Info("no wsConn for app", zap.String("app_id", appId))
 		return
 	}
 
@@ -114,12 +117,17 @@ func (bs *BoreServer) StartBoreServer() error {
 		appId := strings.Split(r.Host, ".")[0]
 		clientIP := r.Header.Get("X-Real-IP")
 
+		defer func() {
+			delete(bs.reqIdChanMap, requestId)
+			bs.logger.Info("cleaned up resources for request", zap.String("req_id", requestId))
+		}()
+
 		reqLogger := bs.logger.With(
 			zap.String("req_id", requestId),
 			zap.String("client_ip", clientIP),
 		)
 
-		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path), zap.String("appId", appId))
+		reqLogger.Info("new incoming request", zap.String("method", r.Method), zap.String("host", r.Host), zap.String("path", r.URL.Path), zap.String("app_id", appId))
 
 		app, ok := bs.apps[appId]
 		if !ok {
