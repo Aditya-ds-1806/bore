@@ -49,7 +49,7 @@ func (bc *BoreClient) NewWSConnection() error {
 		WriteBufferSize: 1024,
 	}
 
-	wsConnStr := fmt.Sprintf("%s://%s/ws", WSScheme, BoreServerHost)
+	wsConnStr := fmt.Sprintf("%s://%s/register", WSScheme, BoreServerHost)
 	bc.logger.Debug("attempting websocket connection", zap.String("url", wsConnStr))
 	conn, res, err := dialer.Dial(wsConnStr, nil)
 
@@ -94,72 +94,77 @@ func (bc *BoreClient) HandleWSMessages() error {
 
 	bc.logger.Info("starting to handle websocket messages")
 	for {
-		_, message, err := bc.wsConn.ReadMessage()
+		_, mes, err := bc.wsConn.ReadMessage()
 		if err != nil {
 			bc.logger.Error("error reading websocket message", zap.Error(err))
 			return err
 		}
 
-		var request borepb.Request
+		var message borepb.Message
 
-		err = proto.Unmarshal(message, &request)
+		err = proto.Unmarshal(mes, &message)
 		if err != nil {
 			bc.logger.Error("failed to unmarshal protobuf message", zap.Error(err))
 			return err
 		}
 
-		bc.logger.Debug("received request", zap.String("reqId", request.Id), zap.String("method", request.Method), zap.String("path", request.Path))
+		switch msg := message.Payload.(type) {
+		case *borepb.Message_Request:
+			bc.logger.Debug("received request", zap.String("reqId", message.MessageId), zap.String("method", msg.Request.Method), zap.String("path", msg.Request.Path))
+			cookies, _ := http.ParseCookie(msg.Request.Cookies)
+			ctx := context.WithValue(context.TODO(), traffik.RequestIDKey, message.MessageId)
+			req := bc.resty.
+				NewRequest().
+				SetContext(ctx).
+				SetMethod(msg.Request.Method).
+				SetURL(msg.Request.Path).
+				SetBody(msg.Request.Body).
+				SetCookies(cookies).
+				SetHeaders(msg.Request.Headers)
+			bc.Traffik.LogRequest(req)
 
-		cookies, _ := http.ParseCookie(request.Cookies)
+			res, err := req.Send()
+			if err != nil {
+				bc.logger.Error("failed to send request", zap.String("reqId", message.MessageId), zap.Error(err))
+				return err
+			}
 
-		ctx := context.WithValue(context.TODO(), traffik.RequestIDKey, request.Id)
+			bc.logger.Debug("response received", zap.String("reqId", message.MessageId), zap.Int("statusCode", res.StatusCode()))
+			bc.Traffik.LogResponse(res)
 
-		req := bc.resty.
-			NewRequest().
-			SetContext(ctx).
-			SetMethod(request.Method).
-			SetURL(request.Path).
-			SetBody(request.Body).
-			SetCookies(cookies).
-			SetHeaders(request.Headers)
+			response := borepb.Response{
+				StatusCode: int32(res.StatusCode()),
+				Body:       res.Bytes(),
+				Timestamp:  res.ReceivedAt().UnixMilli(),
+				Headers:    make(map[string]string),
+			}
 
-		bc.Traffik.LogRequest(req)
+			for headerName, headerValues := range res.Header() {
+				response.Headers[headerName] = strings.Join(headerValues, ",")
+			}
 
-		res, err := req.Send()
-		if err != nil {
-			bc.logger.Error("failed to send request", zap.String("reqId", request.Id), zap.Error(err))
-			return err
+			responseMessage := borepb.Message{
+				MessageId: message.MessageId,
+				Payload:   &borepb.Message_Response{Response: &response},
+			}
+
+			resBytes, err := proto.Marshal(&responseMessage)
+			if err != nil {
+				bc.logger.Error("failed to marshal response", zap.String("reqId", responseMessage.MessageId), zap.Error(err))
+				return err
+			}
+
+			bc.wsMutex.Lock()
+			err = bc.wsConn.WriteMessage(websocket.BinaryMessage, resBytes)
+			bc.wsMutex.Unlock()
+			if err != nil {
+				bc.logger.Error("failed to write response to websocket", zap.String("reqId", responseMessage.MessageId), zap.Error(err))
+				return err
+			}
+
+			bc.logger.Debug("response sent", zap.String("reqId", responseMessage.MessageId))
 		}
 
-		bc.logger.Debug("response received", zap.String("reqId", request.Id), zap.Int("statusCode", res.StatusCode()))
-		bc.Traffik.LogResponse(res)
-
-		response := borepb.Response{
-			Id:         request.Id,
-			StatusCode: int32(res.StatusCode()),
-			Body:       res.Bytes(),
-			Timestamp:  res.ReceivedAt().UnixMilli(),
-			Headers:    make(map[string]string),
-		}
-
-		for headerName, headerValues := range res.Header() {
-			response.Headers[headerName] = strings.Join(headerValues, ",")
-		}
-
-		resBytes, err := proto.Marshal(&response)
-		if err != nil {
-			bc.logger.Error("failed to marshal response", zap.String("reqId", request.Id), zap.Error(err))
-			return err
-		}
-
-		bc.wsMutex.Lock()
-		err = bc.wsConn.WriteMessage(websocket.BinaryMessage, resBytes)
-		bc.wsMutex.Unlock()
-		if err != nil {
-			bc.logger.Error("failed to write response to websocket", zap.String("reqId", request.Id), zap.Error(err))
-			return err
-		}
-		bc.logger.Debug("response sent", zap.String("reqId", request.Id))
 	}
 }
 

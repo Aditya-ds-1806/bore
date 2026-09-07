@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package borepb;
+option go_package = ".";
+
+message Socket {
+  bytes data = 1;
+}
